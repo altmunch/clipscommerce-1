@@ -1,0 +1,53 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-decouple==3.8
+sqlalchemy==2.0.23
+alembic==1.12.1
+psycopg2-binary==2.9.9
+redis==5.0.1
+celery==5.3.4
+pydantic==2.5.0
+pydantic-settings==2.1.0
+pydantic[email]==2.5.0
+httpx==0.25.2
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-mock==3.12.0
+pytest-cov==4.1.0
+pytest-xdist==3.5.0
+httpx==0.25.2
+factory-boy==3.3.0
+faker==20.1.0
+
+# AI/ML Dependencies
+openai==1.52.0
+anthropic==0.34.2
+tiktoken==0.7.0
+tenacity==8.2.3
+
+# Web Scraping & Content Processing
+beautifulsoup4==4.12.2
+lxml==4.9.3
+requests==2.31.0
+Pillow==10.1.0
+pytube==15.0.0
+
+# Vector Databases
+pinecone-client==3.0.3
+weaviate-client==4.4.1
+
+# Text Processing & NLP
+spacy==3.7.2
+transformers==4.36.2
+sentence-transformers==2.2.2
+numpy==1.24.4
+
+# Caching & Performance
+diskcache==5.6.3
+joblib==1.3.2
+
+# Monitoring & Observability
+prometheus-client==0.19.0

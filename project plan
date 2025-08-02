@@ -1,0 +1,260 @@
+Create the project boilerplate and foundational infrastructure according to this tech stack:
+Summary Table: The ViralOS Tech Stack
+Component	Technology Choice	Reason
+Frontend Framework	Next.js (React) with TypeScript	Performance, Developer Experience, Industry Standard
+UI Styling & Components	Tailwind CSS & Shadcn/ui	Custom Design Velocity, Clean & Modern Aesthetic
+Backend Framework	Python with FastAPI	AI/ML Dominance, High Performance, Ease of Use
+Asynchronous Tasks	Celery with Redis	Non-blocking Background Jobs, Essential for UX
+Primary Database	PostgreSQL (via AWS RDS)	Reliability, Structured Data, JSONB Support
+AI/Vector Database	Pinecone / Weaviate	Semantic Search, Core of AI Matching Features
+File Storage	Amazon S3	Scalable & Cost-Effective Media Storage
+Frontend Deployment	Vercel	Best-in-class for Next.js, Seamless Deployments
+Backend Deployment	Docker on AWS ECS / Google Cloud Run	Scalable, Containerized, Modern Infrastructure
+
+UI: ux agent
+You are a world-class UI/UX designer specializing in creating clean, intuitive, and data-forward dashboards for modern SaaS platforms. Your designs prioritize clarity, user velocity, and a premium, professional aesthetic.
+
+PROJECT:
+Design a high-fidelity, four-tab web application dashboard for a product named ViralOS. ViralOS is an AI-powered system that helps e-commerce founders automate their short-form video marketing, from content ideation to performance analysis.
+
+CORE DESIGN PHILOSOPHY:
+
+Minimal & Clean: Every element must serve a purpose. Use generous whitespace and avoid visual clutter. The interface should feel calm and controlled, not busy.
+
+Clarity Above All: The user, a busy founder, must understand the status of their marketing engine at a glance. Data should be presented in a way that is immediately digestible.
+
+Professional & Premium: The aesthetic should inspire confidence and feel like a high-end, professional tool.
+
+1. Overarching Design System & Styling
+
+Theme: Dark Mode. This is a "pro" tool, and a dark theme reduces eye strain and makes data visualizations pop.
+
+Color Palette:
+
+Primary Background: rgb(18, 18, 18) (Off-black)
+
+Secondary Background (Cards/Modules): rgb(29, 29, 29) (Dark Charcoal)
+
+Primary Action/Accent: rgb(168, 85, 247) (Vibrant Purple) - Use for primary buttons, active tabs, and key chart data.
+
+Primary Text: rgb(243, 244, 246) (Light Gray/Off-white)
+
+Secondary Text/Subtle UI: rgb(156, 163, 175) (Gray)
+
+Data Viz Colors: Use a palette of Teal, Pink, and Yellow for secondary chart elements.
+
+Typography:
+
+Font: Use "Inter" (available on Google Fonts).
+
+Headings (H1, H2, Card Titles): Inter Semibold
+
+Body/Paragraphs/Labels: Inter Regular
+
+Iconography:
+
+Style: Use a clean, consistent, line-art style. Feather Icons is the perfect reference.
+
+Color: Use the Secondary Text color (rgb(156, 163, 175)) for standard icons and the Primary Accent color for active or highlighted icons.
+
+Layout & Spacing:
+
+Grid: Adhere to an 8px grid system for all padding, margins, and component sizing.
+
+Borders & Dividers: Use rgb(55, 65, 81) for subtle borders between sections.
+
+Corner Radius: A consistent 8px corner radius on all cards, buttons, and modals.
+
+Component Style:
+
+Buttons: Primary buttons have a solid purple background. Secondary buttons have a purple border with a transparent background.
+
+Cards: Use the Secondary Background color with no border, creating a floating effect on the Primary Background.
+
+2. Global UI Elements
+
+Main Navigation: A top-level horizontal bar.
+
+Four tabs: 🧠 Strategy, 🚀 Pipeline, 📈 Results, 🎨 Brand Kit.
+
+The active tab is underlined with the Primary Accent (purple) color, and its text is fully white. Inactive tabs use the Secondary Text color.
+
+Header (Below Main Navigation):
+
+Left Side: A dropdown menu labeled "Displaying for: [YourBrand.com ▼]" for agency users.
+
+Right Side: A primary action button: "+ New Campaign" (changes based on the active tab).
+
+3. Tab-by-Tab UI/UX Design Specification
+Tab 1: 🧠 Strategy
+
+Purpose: High-level planning of marketing campaigns and content themes.
+
+Layout: A two-column layout. Left column for "Campaigns," right for "Content Pillars."
+
+Key Components:
+
+Left Column - "Campaigns": A vertical list of "Campaign Cards."
+
+Campaign Card UI: A clean card with the Campaign Name (e.g., "Holiday Sale 2025"), Date Range, and a progress bar showing progress towards its goal (e.g., "Goal: $20k Revenue").
+
+Right Column - "Content Pillars": A list of simple, editable tags.
+
+Pillar UI: Each pillar (e.g., "Product Education," "User Testimonials") is displayed as a plain text tag with a subtle background. Users can add or remove these.
+
+Tab 2: 🚀 Pipeline
+
+Purpose: Manage the day-to-day workflow of content creation.
+
+Layout: A multi-column Kanban board that scrolls horizontally. Columns are fixed-width.
+
+Columns: Viral Generator -> Blueprint Architect -> Turbo Editor -> Conversion Catalyst -> Publishing Queue.
+
+Key Components:
+
+Content Cards: The core element. Each card represents one piece of content.
+
+Card Design: As a card moves from left to right, its content dynamically updates to show its current status. For example:
+
+In Viral Generator, it's a simple card with a "Hook" and "Approve/Reject" buttons.
+
+In Blueprint Architect, it shows status icons: [📜 Script] [🎬 Shot List].
+
+In Turbo Editor, it becomes a video preview or an upload area.
+
+In Publishing Queue, it shows the scheduled date and platform icons.
+
+Interaction: Drag-and-drop functionality for cards between columns. Smooth animations are essential.
+
+Tab 3: 📈 Results
+
+Purpose: Analyze performance data and ROI.
+
+Layout: A top-down dashboard with three main sections.
+
+Key Components:
+
+KPI Bar: A row of 4-5 large, bold statistic cards at the top. Each card has a metric name ("Attributed Revenue"), the large value ("$14,832"), and a small percentage change (+12%).
+
+Performance Chart: A large, clean line chart below the KPIs. It must have a dropdown to allow the user to switch the metric being visualized (e.g., "Views," "Revenue"). Use the purple accent for the primary line.
+
+Content Table: A detailed, sortable data table at the bottom.
+
+Table UI: Use subtle horizontal lines to separate rows. Column headers should be clickable to sort. Include columns for a video thumbnail, Views, Clicks, and Revenue. The Revenue column should be right-aligned.
+
+Tab 4: 🎨 Brand Kit
+
+Purpose: A settings page to control the AI's inputs and ensure brand consistency.
+
+Layout: A clean, two-column form-style layout.
+
+Key Components:
+
+Left Column - "Visual Identity":
+
+A section for logo uploads.
+
+A color palette section where users can input HEX codes for their brand colors, which are displayed as colored swatches.
+
+Right Column - "Brand Voice":
+
+A simple text input for "Brand Mission."
+
+Two text areas for "Language Do's" and "Language Don'ts."
+
+Full-Width Bottom Section - "Asset Library": A grid of thumbnails for user-uploaded media like b-roll clips and product photos.
+
+Please generate high-fidelity mockups for each of these four tabs, ensuring strict adherence to the specified design system and layout principles. The final output should be a cohesive and professional UI that feels both powerful and effortless to use.
+
+Backend API: backend architect, llm systems engineer
+ViralOS Backend API: Implementation Outline
+1. Core Principles & Technology
+Framework: Python with FastAPI.
+Authentication: JWT (JSON Web Tokens). A token will be issued upon login and must be included in the Authorization header for all protected endpoints (Authorization: Bearer <token>).
+Base URL: All endpoints will be prefixed with /api/v1/.
+Asynchronous Operations: Long-running tasks (web scraping, AI generation) must not block the API. They will be offloaded to a Celery task queue. The API will immediately return a 202 Accepted response with a job_id. The frontend will poll a dedicated /jobs endpoint to get the status of the task.
+Data Format: All requests and responses will be application/json.
+Casing: camelCase for all JSON properties.
+2. Authentication Endpoints
+These endpoints manage user registration and login.
+POST /auth/register
+Description: Creates a new user account.
+Request Body: { "email": "founder@brand.com", "password": "strongpassword123" }
+Success Response (201): { "userId": "...", "email": "founder@brand.com" }
+POST /auth/login
+Description: Authenticates a user and returns a JWT.
+Request Body: { "email": "founder@brand.com", "password": "strongpassword123" }
+Success Response (200): { "accessToken": "ey...", "tokenType": "bearer" }
+3. Brand, Strategy & Asset Endpoints (Strategy & Brand Kit Tabs)
+These endpoints manage the foundational data for each brand and their high-level strategy.
+POST /brands/assimilate (Async)
+Description: The starting point. Kicks off the background job to scrape a brand's website and create its initial profile and brand kit.
+Request Body: { "url": "https://www.yourbrand.com" }
+Success Response (202): { "jobId": "...", "message": "Brand assimilation has started." }
+GET /brands
+Description: Fetches a list of all brands associated with the authenticated user.
+Success Response (200): { "data": [{ "brandId": "...", "name": "YourBrand", "url": "..." }] }
+GET /brands/{brandId}/kit
+Description: Retrieves the complete brand kit for a single brand.
+Success Response (200): { "data": { "brandName": "...", "logoUrl": "...", "colors": { "primary": "#FFFFFF", "secondary": "#000000" }, "voice": { "tone": "Witty", "dos": "...", "donts": "..." }, "pillars": ["Education", "Testimonials"], "assets": [{ "assetId": "...", "type": "logo", "url": "..." }] } }
+PUT /brands/{brandId}/kit
+Description: Updates the editable fields of a brand's kit.
+Request Body: (Same structure as the GET response)
+Success Response (200): { "message": "Brand kit updated successfully." }
+POST /campaigns
+Description: Creates a new strategic campaign.
+Request Body: { "brandId": "...", "name": "Black Friday 2025", "goal": "...", "startDate": "...", "endDate": "..." }
+Success Response (201): { "data": { "campaignId": "...", ... } }
+GET /campaigns?brandId={brandId}
+Description: Fetches all campaigns for a specific brand.
+Success Response (200): { "data": [{ "campaignId": "...", ... }] }
+4. Content Pipeline Endpoints (Pipeline Tab)
+This is the core workflow, with heavy use of asynchronous jobs.
+POST /ideas/generate (Async)
+Description: Generates a list of viral content ideas based on the brand kit and current trends.
+Request Body: { "brandId": "...", "campaignId": "(optional)" }
+Success Response (202): { "jobId": "...", "message": "Idea generation started." }
+GET /ideas?brandId={brandId}
+Description: Fetches the list of generated ideas.
+Success Response (200): { "data": [{ "ideaId": "...", "hook": "3 Mistakes You're Making...", "status": "pending", "viralScore": 9.1 }] }
+POST /blueprints/generate (Async)
+Description: Approves an idea and generates its detailed blueprint (script, shot list).
+Request Body: { "ideaId": "..." }
+Success Response (202): { "jobId": "...", "message": "Blueprint generation started." }
+POST /videos/generate-ai (Async)
+Description: Generates a video using AI from a blueprint.
+Request Body: { "blueprintId": "..." }
+Success Response (202): { "jobId": "...", "message": "AI video generation started." }
+PUT /videos/{videoId}/optimize
+Description: Updates a video with its final SEO, caption, and hashtags from the Conversion Catalyst stage.
+Request Body: { "caption": "...", "hashtags": ["#tag1", "#tag2"], "cta": "Link in bio!" }
+Success Response (200): { "message": "Video optimized successfully." }
+POST /videos/{videoId}/schedule
+Description: Schedules a fully optimized video for publishing.
+Request Body: { "publishAt": "2025-08-05T18:15:00Z", "platforms": ["tiktok", "instagram"] }
+Success Response (200): { "message": "Video scheduled for publishing." }
+5. Performance & Results Endpoints (Results Tab)
+These endpoints are for data retrieval and must be highly optimized for fast reads.
+GET /results/kpis?brandId={brandId}&startDate=...&endDate=...
+Description: Fetches the main KPI cards for the dashboard.
+Success Response (200): { "data": { "attributedRevenue": 14832, "totalViews": 1200000, "clicksDriven": 3104, "avgConversionRate": 0.025 } }
+GET /results/chart?brandId={brandId}&metric=...&startDate=...&endDate=...
+Description: Fetches time-series data for the performance chart.
+Success Response (200): { "data": [{ "date": "2025-08-01", "value": 1500 }, { "date": "2025-08-02", "value": 1750 }] }
+GET /results/content?brandId={brandId}&sortBy=...&page=...
+Description: Fetches the paginated and sortable content performance table.
+Success Response (200): { "data": [{ "videoId": "...", "thumbnailUrl": "...", "views": 105000, "clicks": 452, "revenue": 2150 }], "pagination": { "currentPage": 1, "totalPages": 10 } }
+GET /results/insights?brandId={brandId}
+Description: Fetches the AI-generated growth recommendations.
+Success Response (200): { "data": [{ "title": "Winning Format", "insight": "Your 'Unboxing' videos have a 50% higher CTR..." }] }
+6. Generic Service Endpoints
+GET /jobs/{jobId}/status
+Description: Crucial endpoint. The frontend polls this to check the progress of any asynchronous job.
+Success Response (200):
+While running: { "jobId": "...", "status": "processing", "progress": 45 }
+On completion: { "jobId": "...", "status": "complete", "result": { "message": "Assimilation complete.", "resourceId": "..." } }
+On failure: { "jobId": "...", "status": "failed", "error": "Could not access website." }
+
+backend front end integration
+
+testing: test automation specialist, root cause debugger
