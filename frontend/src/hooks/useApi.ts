@@ -144,12 +144,35 @@ export function useJobStatus(jobId: string, enabled: boolean = true) {
     queryKey: ['jobStatus', jobId],
     queryFn: () => jobApi.getStatus(jobId).then(res => res.data),
     enabled: !!jobId && enabled,
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Stop polling when job is complete or failed
-      if (data?.status === 'complete' || data?.status === 'failed') {
+      if (query.state.data?.status === 'complete' || query.state.data?.status === 'failed') {
         return false;
       }
       return 2000; // Poll every 2 seconds
     },
   });
+}
+
+// Generic API hook for auth pages
+export function useApi() {
+  return {
+    post: async (endpoint: string, data: any) => {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw { response: { data: error } };
+      }
+      
+      return { data: await response.json() };
+    }
+  };
 }

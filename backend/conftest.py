@@ -10,7 +10,7 @@ from app.main import app
 from app.core.config import settings
 from app.db.session import get_db
 from app.models import Base
-from tests.factories import UserFactory, BrandFactory, CampaignFactory, ContentFactory
+from tests.factories import UserFactory, BrandFactory, CampaignFactory, IdeaFactory
 
 # Test database URL
 TEST_DATABASE_URL = "sqlite:///./test.db"
@@ -159,16 +159,16 @@ def sample_campaign(db_session, sample_brand):
 
 
 @pytest.fixture
-def sample_content(db_session, sample_brand, sample_campaign):
-    """Create a sample content for testing."""
-    content = ContentFactory.create(
+def sample_idea(db_session, sample_brand, sample_campaign):
+    """Create a sample idea for testing."""
+    idea = IdeaFactory.create(
         brand_id=sample_brand.id,
         campaign_id=sample_campaign.id
     )
-    db_session.add(content)
+    db_session.add(idea)
     db_session.commit()
-    db_session.refresh(content)
-    return content
+    db_session.refresh(idea)
+    return idea
 
 
 @pytest.fixture

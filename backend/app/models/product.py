@@ -69,7 +69,7 @@ class Product(Base):
     # Relationships
     brand = relationship("Brand", back_populates="products")
     price_history = relationship("ProductPriceHistory", back_populates="product")
-    competitors = relationship("ProductCompetitor", back_populates="product")
+    competitors = relationship("ProductCompetitor", foreign_keys="ProductCompetitor.product_id", back_populates="product")
     
     # Indexes for common queries
     __table_args__ = (
@@ -147,45 +147,7 @@ class ProductCompetitor(Base):
     )
 
 
-class Brand(Base):
-    """Extended Brand model to include product relationships"""
-    __tablename__ = "brands"
-
-    # Existing fields from original Brand model
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    name = Column(String, nullable=False)
-    url = Column(String, nullable=False)
-    logo_url = Column(String)
-    colors = Column(JSON)
-    voice = Column(JSON)
-    pillars = Column(JSON)
-    
-    # New fields for competitor analysis
-    industry = Column(String, index=True)
-    target_audience = Column(JSON)
-    unique_value_proposition = Column(Text)
-    
-    # Competitor data
-    competitors = Column(JSON)  # [{"name": "Competitor", "url": "...", "similarity": 0.8}]
-    market_position = Column(JSON)  # {"segment": "premium", "share": 15.2}
-    
-    # Product catalog summary
-    product_count = Column(Integer, default=0)
-    avg_price_range = Column(JSON)  # {"min": 10, "max": 100, "avg": 45}
-    main_categories = Column(JSON)  # ["Electronics", "Accessories"]
-    
-    # Scraping configuration
-    scraping_config = Column(JSON)  # Platform-specific scraping settings
-    last_full_scrape = Column(DateTime(timezone=True))
-    
-    # Timestamps
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
-    # Relationships
-    products = relationship("Product", back_populates="brand")
-    scraping_jobs = relationship("ScrapingJob", back_populates="brand")
+# Brand model is imported from brand.py to avoid duplication
 
 
 class ScrapingJob(Base):

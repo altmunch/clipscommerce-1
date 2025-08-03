@@ -105,3 +105,6 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# scrapers
+shopify_app_store_scraper

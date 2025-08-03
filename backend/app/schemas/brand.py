@@ -31,6 +31,7 @@ class BrandBase(BaseModel):
     url: HttpUrl
 
 class BrandCreate(BaseModel):
+    name: str
     url: HttpUrl
 
 class BrandAssimilateResponse(BaseModel):

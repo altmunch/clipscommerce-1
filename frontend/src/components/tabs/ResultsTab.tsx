@@ -12,8 +12,8 @@ export default function ResultsTab() {
   const currentBrandId = brands?.data?.[0]?.brandId || "";
   
   const { data: kpisData } = useKpis(currentBrandId);
-  const { data: chartData } = useChartData(currentBrandId, selectedMetric);
-  const { data: contentData } = useContentPerformance(currentBrandId);
+  const { data: apiChartData } = useChartData(currentBrandId, selectedMetric);
+  const { data: apiContentData } = useContentPerformance(currentBrandId);
 
   const kpis = kpisData ? [
     {
@@ -42,7 +42,7 @@ export default function ResultsTab() {
     }
   ] : [];
 
-  const contentData = [
+  const fallbackContentData = [
     {
       id: 1,
       thumbnail: "/api/placeholder/60/60",
@@ -78,7 +78,7 @@ export default function ResultsTab() {
   ];
 
   // Mock chart data points
-  const chartData = [
+  const fallbackChartData = [
     { date: "Dec 1", value: 850 },
     { date: "Dec 2", value: 920 },
     { date: "Dec 3", value: 880 },
@@ -88,7 +88,10 @@ export default function ResultsTab() {
     { date: "Dec 7", value: 1350 }
   ];
 
-  const maxValue = Math.max(...chartData.map(d => d.value));
+  // Use API data if available, otherwise use fallback data
+  const contentData = apiContentData || fallbackContentData;
+  const chartData = apiChartData || fallbackChartData;
+  const maxValue = Math.max(...chartData.map((d: any) => d.value));
 
   return (
     <div className="max-w-7xl mx-auto px-6 space-y-8">
@@ -135,7 +138,7 @@ export default function ResultsTab() {
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-end space-x-2">
-            {chartData.map((point, index) => (
+            {chartData.map((point: any, index: number) => (
               <div key={index} className="flex-1 flex flex-col items-center">
                 <div 
                   className="w-full bg-primary-accent rounded-t-sm transition-all hover:bg-purple-600"
@@ -190,7 +193,7 @@ export default function ResultsTab() {
                 </tr>
               </thead>
               <tbody>
-                {contentData.map((item) => (
+                {contentData.map((item: any) => (
                   <tr key={item.id} className="border-b border-primary-border hover:bg-primary-card/50">
                     <td className="py-4 px-4">
                       <div className="flex items-center space-x-3">

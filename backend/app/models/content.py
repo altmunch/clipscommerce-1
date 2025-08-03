@@ -57,3 +57,6 @@ class Video(Base):
 
     # Relationships
     blueprint = relationship("Blueprint", back_populates="videos")
+    performance_predictions = relationship("VideoPerformancePrediction", back_populates="video")
+    ab_variants = relationship("ABTestVariant", back_populates="video")
+    analytics = relationship("VideoAnalytics", back_populates="video")

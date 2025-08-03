@@ -106,7 +106,7 @@ export default function StrategyTab() {
           <Card>
             <CardContent className="p-6">
               <div className="space-y-3">
-                {contentPillars.map((pillar, index) => (
+                {contentPillars.map((pillar: string, index: number) => (
                   <div
                     key={index}
                     className="flex items-center justify-between p-3 bg-primary-bg rounded-default border border-primary-border"

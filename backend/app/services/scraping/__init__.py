@@ -15,7 +15,7 @@ from .brand_scraper import BrandScraper
 from .ecommerce_detector import EcommerceDetector
 from .playwright_scraper import PlaywrightScraper
 from .scrapy_runner import ScrapyRunner
-from .proxy_manager import ProxyManager
+from .proxy_manager import ProxyManager, AntiDetectionManager
 from .data_normalizer import DataNormalizer
 from .apify_client import ApifyTikTokClient, ApifyJobStatus, ScrapingMode
 
@@ -28,6 +28,7 @@ __all__ = [
     "PlaywrightScraper",
     "ScrapyRunner",
     "ProxyManager",
+    "AntiDetectionManager",
     "DataNormalizer",
     "ApifyTikTokClient",
     "ApifyJobStatus",

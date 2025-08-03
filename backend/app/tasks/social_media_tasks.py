@@ -67,8 +67,8 @@ def process_scheduled_posts(self):
         try:
             result = loop.run_until_complete(processor.process_scheduled_posts())
         finally:
+            loop.run_until_complete(processor.close())
             loop.close()
-            await processor.close()
         
         db.commit()
         
@@ -252,8 +252,8 @@ def retry_failed_posts(self):
         try:
             result = loop.run_until_complete(processor.retry_failed_posts(max_retries))
         finally:
+            loop.run_until_complete(processor.close())
             loop.close()
-            await processor.close()
         
         db.commit()
         
@@ -303,8 +303,8 @@ def process_webhook_event(platform: str, payload: dict, headers: dict):
                 processor.process_webhook(platform_enum, payload, headers)
             )
         finally:
+            loop.run_until_complete(processor.close())
             loop.close()
-            await processor.close()
         
         db.commit()
         

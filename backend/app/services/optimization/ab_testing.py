@@ -15,7 +15,7 @@ from app.models.content import Video
 from app.models.brand import Brand
 from app.core.config import settings
 from app.db.session import SessionLocal
-from app.services.ai.providers import get_ai_provider
+from app.services.ai.providers import get_text_service
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +65,12 @@ class ABTestingService:
     """Automated A/B testing and variant generation service"""
     
     def __init__(self):
-        self.ai_provider = get_ai_provider()
+        self.ai_provider = None
+    
+    async def _initialize(self):
+        """Initialize async components"""
+        if self.ai_provider is None:
+            self.ai_provider = await get_text_service()
         self.variant_generators = {
             VariantType.HOOK: HookVariantGenerator(),
             VariantType.CTA: CTAVariantGenerator(),
@@ -102,6 +107,7 @@ class ABTestingService:
         Returns:
             Created A/B test experiment
         """
+        await self._initialize()
         try:
             db = SessionLocal()
             
@@ -686,7 +692,12 @@ class BaseVariantGenerator:
     """Base class for variant generators"""
     
     def __init__(self):
-        self.ai_provider = get_ai_provider()
+        self.ai_provider = None
+    
+    async def _initialize(self):
+        """Initialize async components"""
+        if self.ai_provider is None:
+            self.ai_provider = await get_text_service()
     
     async def generate_variations(
         self, 

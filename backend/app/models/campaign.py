@@ -18,3 +18,4 @@ class Campaign(Base):
     # Relationships
     brand = relationship("Brand", back_populates="campaigns")
     ideas = relationship("Idea", back_populates="campaign")
+    ab_experiments = relationship("ABTestExperiment", back_populates="campaign")

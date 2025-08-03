@@ -1,0 +1,2 @@
+# Working Shopify App URLs for testing
+https://apps.shopify.com/klaviyo-email-marketing/reviews

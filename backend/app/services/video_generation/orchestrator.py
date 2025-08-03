@@ -27,7 +27,7 @@ from .ugc_generation import (
     UGCGenerationService, UGCGenerationRequest, TestimonialType,
     AuthenticityLevel, ReviewData
 )
-from .providers import get_provider
+from .base_provider import get_provider
 from .text_to_speech import get_tts_service
 
 logger = logging.getLogger(__name__)

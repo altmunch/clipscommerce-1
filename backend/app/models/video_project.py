@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Any
 from sqlalchemy import Column, String, Text, Float, Integer, DateTime, Boolean, JSON, ForeignKey, Enum as SQLEnum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import UUID
 import enum
 
 from app.db.session import Base
@@ -105,12 +105,12 @@ class VideoProject(Base):
     thumbnail_url = Column(String(500))
     
     # Brand guidelines and customization
-    brand_guidelines = Column(JSONB)  # Colors, fonts, logo, etc.
+    brand_guidelines = Column(JSON)  # Colors, fonts, logo, etc.
     
     # Metadata and configuration
-    generation_config = Column(JSONB)  # AI generation parameters
-    editing_timeline = Column(JSONB)  # Video editing instructions
-    metrics = Column(JSONB)  # Performance metrics after generation
+    generation_config = Column(JSON)  # AI generation parameters
+    editing_timeline = Column(JSON)  # Video editing instructions
+    metrics = Column(JSON)  # Performance metrics after generation
     
     # Audit fields
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -151,7 +151,7 @@ class VideoSegment(Base):
     
     # Provider-specific data
     provider_job_id = Column(String(200))  # External provider's job ID
-    provider_response = Column(JSONB)      # Full provider response
+    provider_response = Column(JSON)      # Full provider response
     
     # Status and results
     status = Column(SQLEnum(GenerationStatusEnum), default=GenerationStatusEnum.PENDING)
@@ -199,7 +199,7 @@ class BRollClip(Base):
     title = Column(String(255))
     description = Column(Text)
     duration = Column(Float, nullable=False)
-    tags = Column(JSONB)  # Array of tags
+    tags = Column(JSON)  # Array of tags
     
     # Source information
     source = Column(String(50))  # "generated", "stock", "uploaded", "extracted"
@@ -272,7 +272,7 @@ class VideoAsset(Base):
     # Processing settings
     processed = Column(Boolean, default=False)
     processed_url = Column(String(500))
-    processing_settings = Column(JSONB)  # Crop, resize, filters, etc.
+    processing_settings = Column(JSON)  # Crop, resize, filters, etc.
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -313,7 +313,7 @@ class UGCTestimonial(Base):
     # Voice settings
     voice_provider = Column(String(50))   # "elevenlabs", "built_in"
     voice_id = Column(String(200))
-    voice_settings = Column(JSONB)        # Speed, pitch, emotion settings
+    voice_settings = Column(JSON)        # Speed, pitch, emotion settings
     
     # Generation results
     status = Column(SQLEnum(GenerationStatusEnum), default=GenerationStatusEnum.PENDING)
@@ -328,8 +328,8 @@ class UGCTestimonial(Base):
     error_message = Column(Text)
     
     # Usage tracking
-    used_in_campaigns = Column(JSONB)     # Track which campaigns use this testimonial
-    performance_metrics = Column(JSONB)   # Engagement metrics if available
+    used_in_campaigns = Column(JSON)     # Track which campaigns use this testimonial
+    performance_metrics = Column(JSON)   # Engagement metrics if available
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -352,7 +352,7 @@ class VideoGenerationJob(Base):
     celery_task_id = Column(String(200))  # Celery task ID for tracking
     
     # Job parameters
-    job_config = Column(JSONB)     # Parameters passed to the job
+    job_config = Column(JSON)     # Parameters passed to the job
     priority = Column(Integer, default=0)  # Job priority
     
     # Status and progress
@@ -361,7 +361,7 @@ class VideoGenerationJob(Base):
     current_step = Column(String(200))
     
     # Results and errors
-    result = Column(JSONB)         # Job result data
+    result = Column(JSON)         # Job result data
     error_message = Column(Text)
     retry_count = Column(Integer, default=0)
     max_retries = Column(Integer, default=3)
