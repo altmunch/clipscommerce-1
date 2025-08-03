@@ -1,0 +1,341 @@
+name: Nightly Comprehensive Tests
+
+on:
+  schedule:
+    # Run every night at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '18'
+
+jobs:
+  comprehensive-performance-testing:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_USER: testuser
+          POSTGRES_DB: viraltest
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install locust pytest-benchmark
+      
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+          npx playwright install --with-deps
+      
+      - name: Set up test database
+        env:
+          DATABASE_URL: postgresql://testuser:testpassword@localhost:5432/viraltest
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          cd backend
+          alembic upgrade head
+      
+      - name: Run comprehensive backend performance tests
+        env:
+          DATABASE_URL: postgresql://testuser:testpassword@localhost:5432/viraltest
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          cd backend
+          pytest tests/performance/ -v \
+            --benchmark-json=benchmark-results.json \
+            --junit-xml=performance-results.xml
+      
+      - name: Start API server for load testing
+        env:
+          DATABASE_URL: postgresql://testuser:testpassword@localhost:5432/viraltest
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          cd backend
+          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          sleep 15
+      
+      - name: Run extended load tests
+        run: |
+          cd backend/tests/performance
+          # Light load test
+          locust -f locustfile.py \
+            --host http://localhost:8000 \
+            --users 10 \
+            --spawn-rate 2 \
+            --run-time 5m \
+            --html light-load-report.html \
+            --csv light-load \
+            --headless
+          
+          sleep 30
+          
+          # Medium load test
+          locust -f locustfile.py \
+            --host http://localhost:8000 \
+            --users 50 \
+            --spawn-rate 5 \
+            --run-time 10m \
+            --html medium-load-report.html \
+            --csv medium-load \
+            --headless
+          
+          sleep 30
+          
+          # Heavy load test
+          locust -f locustfile.py \
+            --host http://localhost:8000 \
+            --users 100 \
+            --spawn-rate 10 \
+            --run-time 15m \
+            --html heavy-load-report.html \
+            --csv heavy-load \
+            --headless
+      
+      - name: Build frontend application
+        run: |
+          cd frontend
+          npm run build
+      
+      - name: Start frontend application
+        run: |
+          cd frontend
+          npm start &
+          npx wait-on http://localhost:3000
+        env:
+          CI: true
+      
+      - name: Run comprehensive frontend performance tests
+        run: |
+          cd frontend
+          npx playwright test src/tests/performance/ --reporter=html
+      
+      - name: Run Lighthouse audit
+        run: |
+          npm install -g lighthouse
+          lighthouse http://localhost:3000 \
+            --output html \
+            --output json \
+            --output-path ./lighthouse-results \
+            --chrome-flags="--headless --no-sandbox" \
+            --config-path ./src/tests/performance/lighthouse.config.js
+      
+      - name: Analyze performance trends
+        run: |
+          # Create performance trend analysis
+          echo "Performance Analysis Report" > performance-summary.md
+          echo "==========================" >> performance-summary.md
+          echo "" >> performance-summary.md
+          echo "## Load Test Results" >> performance-summary.md
+          
+          # Extract key metrics from load test results
+          if [ -f "backend/tests/performance/heavy-load_stats.csv" ]; then
+            echo "### Heavy Load Test (100 users)" >> performance-summary.md
+            tail -n 1 backend/tests/performance/heavy-load_stats.csv >> performance-summary.md
+          fi
+          
+          echo "" >> performance-summary.md
+          echo "## Frontend Performance" >> performance-summary.md
+          
+          # Extract Lighthouse scores
+          if [ -f "lighthouse-results.json" ]; then
+            node -e "
+              const results = require('./lighthouse-results.json');
+              const categories = results.lhr.categories;
+              console.log('Performance Score:', Math.round(categories.performance.score * 100));
+              console.log('Accessibility Score:', Math.round(categories.accessibility.score * 100));
+              console.log('Best Practices Score:', Math.round(categories['best-practices'].score * 100));
+            " >> performance-summary.md
+          fi
+      
+      - name: Upload comprehensive test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: nightly-performance-results
+          path: |
+            backend/tests/performance/*-load-report.html
+            backend/tests/performance/*-load_*.csv
+            backend/benchmark-results.json
+            frontend/playwright-report/
+            lighthouse-results.*
+            performance-summary.md
+      
+      - name: Send performance report
+        if: always()
+        run: |
+          echo "Nightly performance tests completed"
+          echo "Results uploaded as artifacts"
+          # Add integration with monitoring tools (DataDog, New Relic, etc.)
+
+  dependency-security-audit:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install Python dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install safety pip-audit
+      
+      - name: Install Node.js dependencies
+        run: |
+          cd frontend
+          npm ci
+      
+      - name: Python security audit (Safety)
+        run: |
+          cd backend
+          safety check --json --output safety-report.json || true
+          safety check
+      
+      - name: Python security audit (pip-audit)
+        run: |
+          cd backend
+          pip-audit --output pip-audit-report.json --format json || true
+          pip-audit
+      
+      - name: Node.js security audit
+        run: |
+          cd frontend
+          npm audit --audit-level high --json > npm-audit-report.json || true
+          npm audit --audit-level high
+      
+      - name: Create security summary
+        run: |
+          echo "Security Audit Summary" > security-summary.md
+          echo "=====================" >> security-summary.md
+          echo "" >> security-summary.md
+          
+          echo "## Python Dependencies" >> security-summary.md
+          if [ -f "backend/safety-report.json" ]; then
+            echo "Safety scan completed - check artifacts for details" >> security-summary.md
+          fi
+          
+          echo "" >> security-summary.md
+          echo "## Node.js Dependencies" >> security-summary.md
+          if [ -f "frontend/npm-audit-report.json" ]; then
+            echo "npm audit completed - check artifacts for details" >> security-summary.md
+          fi
+          
+          date >> security-summary.md
+      
+      - name: Upload security audit results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: security-audit-results
+          path: |
+            backend/safety-report.json
+            backend/pip-audit-report.json
+            frontend/npm-audit-report.json
+            security-summary.md
+
+  code-quality-analysis:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for SonarCloud
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install Python dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install coverage pytest-cov
+      
+      - name: Install Node.js dependencies
+        run: |
+          cd frontend
+          npm ci
+      
+      - name: Run Python tests with coverage
+        run: |
+          cd backend
+          pytest --cov=app --cov-report=xml --cov-report=html
+      
+      - name: Run frontend tests with coverage
+        run: |
+          cd frontend
+          npm run test -- --coverage --watchAll=false
+      
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: coverage-reports
+          path: |
+            backend/htmlcov/
+            backend/coverage.xml
+            frontend/coverage/

@@ -1,0 +1,146 @@
+{
+    "actorSpecification": 1,
+    "name": "viralos-tiktok-trend-scraper",
+    "title": "ViralOS TikTok Trend Scraper",
+    "description": "Advanced TikTok trend scraper for ViralOS platform. Extracts trending content, hashtags, sounds, and viral patterns with comprehensive analytics and pattern recognition capabilities.",
+    "version": "1.0.0",
+    "buildTag": "latest",
+    "environmentVariables": {},
+    "dockerfile": "./Dockerfile",
+    "readme": "./README.md",
+    "input": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "TikTok Trend Scraper Input",
+        "type": "object",
+        "properties": {
+            "mode": {
+                "title": "Scraping Mode",
+                "type": "string",
+                "description": "Type of scraping to perform",
+                "enum": ["trending", "hashtag", "sound", "user", "discover"],
+                "default": "trending",
+                "enumTitles": [
+                    "Trending Content",
+                    "Hashtag Analysis", 
+                    "Sound Tracking",
+                    "User Content",
+                    "Discover Page"
+                ]
+            },
+            "targets": {
+                "title": "Targets",
+                "type": "array",
+                "description": "List of hashtags (with #), users (with @), or sound IDs to track",
+                "items": {
+                    "type": "string"
+                },
+                "default": [],
+                "editor": "stringArray"
+            },
+            "maxVideos": {
+                "title": "Maximum Videos",
+                "type": "integer",
+                "description": "Maximum number of videos to scrape",
+                "minimum": 1,
+                "maximum": 10000,
+                "default": 1000
+            },
+            "regions": {
+                "title": "Geographic Regions", 
+                "type": "array",
+                "description": "Geographic regions to focus on (ISO country codes)",
+                "items": {
+                    "type": "string"
+                },
+                "default": ["US", "UK", "CA", "AU"],
+                "editor": "stringArray"
+            },
+            "languages": {
+                "title": "Languages",
+                "type": "array", 
+                "description": "Languages to focus on (ISO language codes)",
+                "items": {
+                    "type": "string"
+                },
+                "default": ["en"],
+                "editor": "stringArray"
+            },
+            "includeVideoAnalysis": {
+                "title": "Include Video Analysis",
+                "type": "boolean",
+                "description": "Perform detailed video content analysis including hooks, patterns, and structure",
+                "default": true
+            },
+            "includeEngagementMetrics": {
+                "title": "Include Engagement Metrics",
+                "type": "boolean", 
+                "description": "Extract and calculate detailed engagement metrics and viral scores",
+                "default": true
+            },
+            "includeTrendAnalysis": {
+                "title": "Include Trend Analysis",
+                "type": "boolean",
+                "description": "Perform comprehensive trend pattern analysis across all collected data",
+                "default": true
+            },
+            "minEngagement": {
+                "title": "Minimum Engagement",
+                "type": "integer",
+                "description": "Minimum total engagement (likes + comments + shares) threshold for videos",
+                "minimum": 0,
+                "default": 100
+            },
+            "proxyConfiguration": {
+                "title": "Proxy Configuration",
+                "type": "object",
+                "description": "Proxy settings for scraping to avoid blocks",
+                "properties": {
+                    "useApifyProxy": {
+                        "title": "Use Apify Proxy",
+                        "type": "boolean",
+                        "description": "Use Apify's proxy service",
+                        "default": true
+                    },
+                    "apifyProxyGroups": {
+                        "title": "Apify Proxy Groups",
+                        "type": "array",
+                        "description": "Proxy groups to use",
+                        "items": {
+                            "type": "string"
+                        },
+                        "default": ["RESIDENTIAL"],
+                        "editor": "stringArray"
+                    }
+                },
+                "editor": "json"
+            },
+            "outputFormat": {
+                "title": "Output Format",
+                "type": "string",
+                "description": "Format for the output data",
+                "enum": ["json", "csv", "excel"],
+                "default": "json"
+            }
+        },
+        "required": ["mode"]
+    },
+    "storages": {
+        "dataset": {
+            "actorSpecification": 1,
+            "views": {
+                "overview": {
+                    "title": "Overview",
+                    "transformation": {
+                        "fields": ["id", "description", "creator.username", "stats.views", "stats.likes", "engagementRate", "viralScore", "hashtags"]
+                    }
+                },
+                "analytics": {
+                    "title": "Analytics", 
+                    "transformation": {
+                        "fields": ["id", "stats", "engagementRate", "viralScore", "contentAnalysis", "trendIndicators"]
+                    }
+                }
+            }
+        }
+    }
+}

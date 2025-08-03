@@ -1,0 +1,508 @@
+name: ViralOS CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run nightly performance tests
+    - cron: '0 2 * * *'
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '18'
+  POSTGRES_VERSION: '15'
+  REDIS_VERSION: '7'
+
+jobs:
+  # Code Quality and Security
+  code-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install Python dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install black isort flake8 mypy bandit safety
+      
+      - name: Python code formatting (Black)
+        run: |
+          cd backend
+          black --check --diff .
+      
+      - name: Python imports (isort)
+        run: |
+          cd backend
+          isort --check-only --diff .
+      
+      - name: Python linting (flake8)
+        run: |
+          cd backend
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
+      
+      - name: Python type checking (mypy)
+        run: |
+          cd backend
+          mypy app/ --ignore-missing-imports
+      
+      - name: Python security check (bandit)
+        run: |
+          cd backend
+          bandit -r app/ -f json -o bandit-report.json
+          bandit -r app/ --skip B101,B601
+      
+      - name: Python dependency security (safety)
+        run: |
+          cd backend
+          safety check --json --output safety-report.json || true
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+      
+      - name: Frontend linting (ESLint)
+        run: |
+          cd frontend
+          npm run lint
+      
+      - name: Frontend type checking (TypeScript)
+        run: |
+          cd frontend
+          npm run type-check
+      
+      - name: Frontend security audit
+        run: |
+          cd frontend
+          npm audit --audit-level high
+
+  # Backend Testing
+  backend-tests:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:${{ env.POSTGRES_VERSION }}
+        env:
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_USER: testuser
+          POSTGRES_DB: viraltest
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:${{ env.REDIS_VERSION }}
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    strategy:
+      matrix:
+        test-type: [unit, integration, performance]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest-cov pytest-asyncio pytest-mock
+      
+      - name: Set up test environment
+        env:
+          DATABASE_URL: postgresql://testuser:testpassword@localhost:5432/viraltest
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key-for-ci
+          ENVIRONMENT: test
+        run: |
+          cd backend
+          # Run database migrations
+          alembic upgrade head
+      
+      - name: Run unit tests
+        if: matrix.test-type == 'unit'
+        env:
+          DATABASE_URL: postgresql://testuser:testpassword@localhost:5432/viraltest
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          cd backend
+          pytest tests/services/ tests/api/ tests/db/ -v \
+            --cov=app \
+            --cov-report=xml \
+            --cov-report=html \
+            --cov-fail-under=80 \
+            --junit-xml=test-results.xml
+      
+      - name: Run integration tests
+        if: matrix.test-type == 'integration'
+        env:
+          DATABASE_URL: postgresql://testuser:testpassword@localhost:5432/viraltest
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          cd backend
+          pytest tests/integration/ -v \
+            --junit-xml=integration-results.xml
+      
+      - name: Run performance tests
+        if: matrix.test-type == 'performance'
+        env:
+          DATABASE_URL: postgresql://testuser:testpassword@localhost:5432/viraltest
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          cd backend
+          pytest tests/performance/ -v -m performance \
+            --junit-xml=performance-results.xml
+      
+      - name: Upload coverage to Codecov
+        if: matrix.test-type == 'unit'
+        uses: codecov/codecov-action@v3
+        with:
+          file: backend/coverage.xml
+          flags: backend
+          name: backend-coverage
+      
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: backend-test-results-${{ matrix.test-type }}
+          path: |
+            backend/*-results.xml
+            backend/htmlcov/
+            backend/bandit-report.json
+            backend/safety-report.json
+
+  # Frontend Testing
+  frontend-tests:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        test-type: [unit, e2e, performance]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+      
+      - name: Run unit tests
+        if: matrix.test-type == 'unit'
+        run: |
+          cd frontend
+          npm run test -- --coverage --watchAll=false --testResultsProcessor=jest-junit
+        env:
+          JEST_JUNIT_OUTPUT_DIR: test-results
+          JEST_JUNIT_OUTPUT_NAME: unit-test-results.xml
+      
+      - name: Build application
+        if: matrix.test-type == 'e2e' || matrix.test-type == 'performance'
+        run: |
+          cd frontend
+          npm run build
+      
+      - name: Install Playwright browsers
+        if: matrix.test-type == 'e2e' || matrix.test-type == 'performance'
+        run: |
+          cd frontend
+          npx playwright install --with-deps
+      
+      - name: Start application for E2E tests
+        if: matrix.test-type == 'e2e' || matrix.test-type == 'performance'
+        run: |
+          cd frontend
+          npm start &
+          npx wait-on http://localhost:3000
+        env:
+          CI: true
+      
+      - name: Run E2E tests
+        if: matrix.test-type == 'e2e'
+        run: |
+          cd frontend
+          npx playwright test
+      
+      - name: Run performance tests
+        if: matrix.test-type == 'performance'
+        run: |
+          cd frontend
+          npx playwright test src/tests/performance/
+      
+      - name: Upload E2E test results
+        uses: actions/upload-artifact@v3
+        if: always() && (matrix.test-type == 'e2e' || matrix.test-type == 'performance')
+        with:
+          name: frontend-${{ matrix.test-type }}-results
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+
+  # Load Testing
+  load-testing:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[load-test]')
+    
+    services:
+      postgres:
+        image: postgres:${{ env.POSTGRES_VERSION }}
+        env:
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_USER: testuser
+          POSTGRES_DB: viraltest
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:${{ env.REDIS_VERSION }}
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install locust
+      
+      - name: Start API server
+        env:
+          DATABASE_URL: postgresql://testuser:testpassword@localhost:5432/viraltest
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          cd backend
+          alembic upgrade head
+          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          sleep 10
+      
+      - name: Run load tests
+        run: |
+          cd backend/tests/performance
+          locust -f locustfile.py \
+            --host http://localhost:8000 \
+            --users 50 \
+            --spawn-rate 5 \
+            --run-time 5m \
+            --html locust-report.html \
+            --csv locust-stats \
+            --headless
+      
+      - name: Upload load test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: load-test-results
+          path: |
+            backend/tests/performance/locust-report.html
+            backend/tests/performance/locust-stats*.csv
+
+  # Security Testing
+  security-testing:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+      
+      - name: Run OWASP ZAP baseline scan
+        if: github.event_name == 'schedule'
+        uses: zaproxy/action-baseline@v0.7.0
+        with:
+          target: 'http://localhost:3000'
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a'
+
+  # Build and Deploy
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    needs: [code-quality, backend-tests, frontend-tests]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
+      - name: Login to Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ secrets.CONTAINER_REGISTRY }}
+          username: ${{ secrets.CONTAINER_USERNAME }}
+          password: ${{ secrets.CONTAINER_PASSWORD }}
+      
+      - name: Build and push backend image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ secrets.CONTAINER_REGISTRY }}/viralOS-backend:latest
+            ${{ secrets.CONTAINER_REGISTRY }}/viralOS-backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ secrets.CONTAINER_REGISTRY }}/viralOS-frontend:latest
+            ${{ secrets.CONTAINER_REGISTRY }}/viralOS-frontend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      - name: Deploy to staging
+        run: |
+          echo "Deploying to staging environment..."
+          # Add deployment commands here
+      
+      - name: Run smoke tests on staging
+        run: |
+          echo "Running smoke tests on staging..."
+          # Add smoke test commands here
+
+  # Performance Monitoring
+  performance-monitoring:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs: [build-and-deploy]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli@0.12.x
+      
+      - name: Run Lighthouse CI
+        run: |
+          lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+      
+      - name: Upload Lighthouse results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: lighthouse-results
+          path: .lighthouseci/
+
+  # Notification
+  notify:
+    runs-on: ubuntu-latest
+    needs: [code-quality, backend-tests, frontend-tests, security-testing]
+    if: always()
+    
+    steps:
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "All tests passed! 🎉"
+          # Add success notification (Slack, Teams, etc.)
+      
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Tests failed! 😞"
+          # Add failure notification (Slack, Teams, etc.)
+
+# Clean up old artifacts
+  cleanup:
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [backend-tests, frontend-tests, load-testing]
+    
+    steps:
+      - name: Delete old artifacts
+        uses: geekyeggo/delete-artifact@v2
+        with:
+          name: |
+            backend-test-results-*
+            frontend-unit-results
+            frontend-e2e-results
+            frontend-performance-results
+            load-test-results
+          failOnError: false

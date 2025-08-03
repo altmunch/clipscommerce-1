@@ -1,0 +1,156 @@
+{
+    "name": "viralos-tiktok-trend-scraper",
+    "version": "1.0.0",
+    "description": "Advanced TikTok trend scraper for ViralOS - extracts trending content, hashtags, sounds, and viral patterns",
+    "main": "src/main.js",
+    "scripts": {
+        "start": "node src/main.js",
+        "dev": "node src/main.js",
+        "test": "jest",
+        "lint": "eslint src --ext .js",
+        "build": "npm install"
+    },
+    "keywords": [
+        "tiktok",
+        "scraper",
+        "trends",
+        "viral",
+        "hashtags",
+        "sounds",
+        "apify",
+        "playwright"
+    ],
+    "author": "ViralOS",
+    "license": "MIT",
+    "dependencies": {
+        "apify": "^3.1.10",
+        "playwright": "^1.41.0",
+        "playwright-extra": "^4.3.6",
+        "playwright-extra-plugin-stealth": "^2.11.2",
+        "playwright-extra-plugin-user-data-dir": "^2.2.7",
+        "user-agents": "^1.0.1203",
+        "cheerio": "^1.0.0-rc.12",
+        "lodash": "^4.17.21",
+        "moment": "^2.29.4",
+        "p-limit": "^4.0.0",
+        "p-retry": "^5.1.2",
+        "probe-image-size": "^7.2.3"
+    },
+    "devDependencies": {
+        "jest": "^29.7.0",
+        "eslint": "^8.55.0"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/viralos/apify-tiktok-scraper"
+    },
+    "apify": {
+        "actorSpecification": 1,
+        "name": "viralos-tiktok-trend-scraper",
+        "title": "ViralOS TikTok Trend Scraper",
+        "description": "Extract trending TikTok content, hashtags, sounds, and viral patterns with advanced analytics and pattern recognition",
+        "version": "1.0.0",
+        "meta": {
+            "templateId": "playwright-node"
+        },
+        "input": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "title": "TikTok Trend Scraper Input",
+            "type": "object",
+            "properties": {
+                "mode": {
+                    "title": "Scraping Mode",
+                    "type": "string",
+                    "description": "Type of scraping to perform",
+                    "enum": ["trending", "hashtag", "sound", "user", "discover"],
+                    "default": "trending"
+                },
+                "targets": {
+                    "title": "Targets",
+                    "type": "array",
+                    "description": "List of hashtags, users, or sounds to track",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": []
+                },
+                "maxVideos": {
+                    "title": "Maximum Videos",
+                    "type": "integer",
+                    "description": "Maximum number of videos to scrape",
+                    "minimum": 1,
+                    "maximum": 10000,
+                    "default": 1000
+                },
+                "regions": {
+                    "title": "Geographic Regions", 
+                    "type": "array",
+                    "description": "Geographic regions to focus on",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": ["US", "UK", "CA", "AU"]
+                },
+                "languages": {
+                    "title": "Languages",
+                    "type": "array", 
+                    "description": "Languages to focus on",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": ["en"]
+                },
+                "includeVideoAnalysis": {
+                    "title": "Include Video Analysis",
+                    "type": "boolean",
+                    "description": "Whether to perform detailed video content analysis",
+                    "default": true
+                },
+                "includeEngagementMetrics": {
+                    "title": "Include Engagement Metrics",
+                    "type": "boolean", 
+                    "description": "Whether to extract detailed engagement metrics",
+                    "default": true
+                },
+                "includeTrendAnalysis": {
+                    "title": "Include Trend Analysis",
+                    "type": "boolean",
+                    "description": "Whether to perform trend pattern analysis",
+                    "default": true
+                },
+                "minEngagement": {
+                    "title": "Minimum Engagement",
+                    "type": "integer",
+                    "description": "Minimum engagement threshold for videos",
+                    "minimum": 0,
+                    "default": 100
+                },
+                "proxyConfiguration": {
+                    "title": "Proxy Configuration",
+                    "type": "object",
+                    "description": "Proxy settings for scraping",
+                    "properties": {
+                        "useApifyProxy": {
+                            "type": "boolean",
+                            "default": true
+                        },
+                        "apifyProxyGroups": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            },
+                            "default": ["RESIDENTIAL"]
+                        }
+                    }
+                },
+                "outputFormat": {
+                    "title": "Output Format",
+                    "type": "string",
+                    "enum": ["json", "csv", "excel"],
+                    "default": "json"
+                }
+            },
+            "required": ["mode"]
+        }
+    }
+}

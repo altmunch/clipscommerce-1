@@ -1,0 +1,40 @@
+# OWASP ZAP baseline scan rules for ViralOS
+# Format: RULE_ID	ACTION	URL_REGEX
+# Actions: IGNORE, WARN, FAIL
+
+# Ignore certain false positives for API endpoints
+10202	IGNORE	.*	# Absence of Anti-CSRF Tokens (handled by JWT)
+10096	IGNORE	.*	# Timestamp Disclosure (not sensitive for API)
+10109	IGNORE	.*	# Modern Web Application (expected)
+
+# Security headers warnings (should be addressed in production)
+10020	WARN	.*	# X-Frame-Options Header Not Set
+10021	WARN	.*	# X-Content-Type-Options Header Missing
+10023	WARN	.*	# Information Disclosure - Debug Error Messages
+
+# Content Security Policy
+10038	WARN	.*	# Content Security Policy (CSP) Header Not Set
+
+# Cookie security (API uses JWT tokens)
+10054	IGNORE	.*	# Cookie Without Secure Flag
+10055	IGNORE	.*	# Cookie Without HttpOnly Flag
+10056	IGNORE	.*	# Cookie Without SameSite Attribute
+
+# SSL/TLS configuration (environment dependent)
+10035	WARN	.*	# Strict-Transport-Security Header Not Set
+
+# Information disclosure
+10027	WARN	.*	# Information Disclosure - Suspicious Comments
+10040	WARN	.*	# Secure Pages Include Mixed Content
+
+# Path traversal (should fail if detected)
+6	FAIL	.*	# Path Traversal
+
+# SQL injection (should fail if detected)
+40018	FAIL	.*	# SQL Injection
+
+# XSS (should fail if detected)
+40012	FAIL	.*	# Cross Site Scripting (Reflected)
+40014	FAIL	.*	# Cross Site Scripting (Persistent)
+40016	FAIL	.*	# Cross Site Scripting (Persistent) - Prime
+40017	FAIL	.*	# Cross Site Scripting (Persistent) - Spider
