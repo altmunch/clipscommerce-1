@@ -17,6 +17,7 @@ from scrapy.utils.project import get_project_settings
 from scrapy import Spider, Request
 from scrapy.http import Response
 
+from app.core.security_utils import SecureSubprocessExecutor, SafeTempFile
 from .data_normalizer import DataNormalizer
 from .ecommerce_detector import EcommerceDetector
 
@@ -109,7 +110,8 @@ class ProductSpider(Spider):
                 if parsed_price.amount:
                     product_data["price"] = float(parsed_price.amount)
                     product_data["currency"] = parsed_price.currency
-            except:
+            except (ValueError, AttributeError, TypeError) as e:
+                logger.debug(f"Price parsing failed for '{price_text}': {e}")
                 pass
         
         # Extract availability
@@ -341,16 +343,14 @@ class ScrapyRunner:
                 script_file.write(spider_script)
                 script_file_path = script_file.name
             
-            # Run spider in subprocess
-            process = await asyncio.create_subprocess_exec(
-                "python", script_file_path, input_file_path, output_file_path,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+            # Run spider in subprocess securely
+            result = await SecureSubprocessExecutor.execute_safe(
+                executable="python",
+                args=[script_file_path, input_file_path, output_file_path],
+                timeout=1800  # 30 minutes timeout for scraping
             )
             
-            stdout, stderr = await process.communicate()
-            
-            if process.returncode == 0:
+            if result["success"]:
                 # Read results
                 if os.path.exists(output_file_path):
                     with open(output_file_path, 'r') as f:
@@ -360,7 +360,7 @@ class ScrapyRunner:
                     logger.warning("No output file generated")
                     return []
             else:
-                logger.error(f"Scrapy subprocess failed: {stderr.decode()}")
+                logger.error(f"Scrapy subprocess failed: {result['stderr']}")
                 return []
         
         except Exception as e:

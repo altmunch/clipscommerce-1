@@ -1,18 +1,25 @@
-from typing import List, Union
-from pydantic import AnyHttpUrl, validator
+from typing import List, Union, Optional
+from pydantic import AnyHttpUrl, validator, Field
 from pydantic_settings import BaseSettings
-import secrets
+import os
 
 class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
-    SECRET_KEY: str = secrets.token_urlsafe(32)
+    SECRET_KEY: str = Field(..., env="SECRET_KEY", description="JWT secret key - must be set in environment")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
     
-    # Database
-    DATABASE_URL: str = "postgresql://postgres:password@localhost:5432/viralos"
+    # Database with proper defaults for development
+    DATABASE_URL: str = Field(
+        default="postgresql://postgres:postgres@localhost:5432/viralos",
+        env="DATABASE_URL",
+        description="Database connection URL"
+    )
+    DB_POOL_SIZE: int = Field(default=20, env="DB_POOL_SIZE")
+    DB_MAX_OVERFLOW: int = Field(default=30, env="DB_MAX_OVERFLOW")
+    DB_POOL_RECYCLE: int = Field(default=3600, env="DB_POOL_RECYCLE")
     
     # Redis
-    REDIS_URL: str = "redis://localhost:6379"
+    REDIS_URL: str = Field(default="redis://localhost:6379", env="REDIS_URL")
     
     # CORS
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
@@ -25,9 +32,15 @@ class Settings(BaseSettings):
             return v
         raise ValueError(v)
     
-    # AI Services
-    OPENAI_API_KEY: str = ""
-    ANTHROPIC_API_KEY: str = ""
+    # AI Services - Required for production
+    OPENAI_API_KEY: str = Field(default="", env="OPENAI_API_KEY")
+    ANTHROPIC_API_KEY: str = Field(default="", env="ANTHROPIC_API_KEY")
+    
+    @validator("OPENAI_API_KEY", "ANTHROPIC_API_KEY")
+    def validate_api_keys(cls, v, field):
+        if not v and os.getenv("ENVIRONMENT", "development") == "production":
+            raise ValueError(f"{field.name} is required in production environment")
+        return v
     
     # Vector Databases
     PINECONE_API_KEY: str = ""

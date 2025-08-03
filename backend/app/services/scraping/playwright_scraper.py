@@ -48,15 +48,17 @@ class PlaywrightScraper(BaseScraper):
         """Initialize Playwright browser"""
         self.playwright = await async_playwright().start()
         
-        # Launch browser
+        # Launch browser with secure configuration
         browser_kwargs = {
             "headless": self.headless,
             "args": [
-                "--no-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-blink-features=AutomationControlled",
-                "--disable-web-security",
-                "--disable-features=VizDisplayCompositor"
+                "--disable-dev-shm-usage",  # Helps with Docker/container environments
+                "--disable-blink-features=AutomationControlled",  # Reduce detection
+                "--disable-features=VizDisplayCompositor",  # Performance optimization
+                "--no-first-run",  # Skip first run wizard
+                "--disable-default-apps",  # Don't load default apps
+                # Security: Removed --no-sandbox and --disable-web-security
+                # These flags create serious security vulnerabilities
             ]
         }
         
@@ -67,13 +69,13 @@ class PlaywrightScraper(BaseScraper):
         else:
             self.browser = await self.playwright.webkit.launch(**browser_kwargs)
         
-        # Create context with stealth settings
+        # Create context with secure settings
         self.context = await self.browser.new_context(
             viewport=self.viewport_size,
             user_agent=self.get_random_user_agent(),
             java_script_enabled=True,
             accept_downloads=False,
-            ignore_https_errors=True,
+            ignore_https_errors=False,  # Security: Validate HTTPS certificates
             extra_http_headers={
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                 "Accept-Language": "en-US,en;q=0.5",
@@ -286,7 +288,7 @@ class PlaywrightScraper(BaseScraper):
                     self.wait_for_selector, 
                     timeout=self.wait_timeout
                 )
-            except:
+            except TimeoutError:
                 logger.debug(f"Selector {self.wait_for_selector} not found within timeout")
         
         # Common e-commerce specific waits
@@ -299,13 +301,13 @@ class PlaywrightScraper(BaseScraper):
             try:
                 await page.wait_for_selector(selector, timeout=5000)
                 break  # Found one, good enough
-            except:
+            except (TimeoutError, Exception):
                 continue
         
         # Wait for any lazy-loaded content
         try:
             await page.wait_for_load_state("networkidle", timeout=10000)
-        except:
+        except (TimeoutError, Exception):
             pass
         
         # Scroll to trigger lazy loading
@@ -371,7 +373,7 @@ class PlaywrightScraper(BaseScraper):
                         if close_btn:
                             await close_btn.click(timeout=1000)
                             await asyncio.sleep(0.5)
-            except:
+            except (TimeoutError, Exception):
                 continue
         
         # Handle age verification or region selection
@@ -388,7 +390,7 @@ class PlaywrightScraper(BaseScraper):
                     await element.click(timeout=1000)
                     await asyncio.sleep(1)
                     break
-            except:
+            except (TimeoutError, Exception):
                 continue
     
     async def get_performance_metrics(self, page: Page) -> Dict[str, Any]:
@@ -407,7 +409,8 @@ class PlaywrightScraper(BaseScraper):
                 }
             """)
             return metrics
-        except:
+        except Exception as e:
+            logger.debug(f"Performance metrics extraction failed: {e}")
             return {}
     
     async def extract_dynamic_content(self, page: Page) -> Dict[str, Any]:

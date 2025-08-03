@@ -16,6 +16,7 @@ import aiofiles
 import aiohttp
 
 from app.core.config import settings
+from app.core.security_utils import SecureSubprocessExecutor, InputValidator
 from app.models.video_project import VideoProject, VideoSegment, BRollClip, VideoAsset
 from .text_to_speech import TTSService, get_tts_service
 
@@ -590,20 +591,19 @@ class VideoAssemblyService:
             str(output_path)
         ])
         
-        # Execute FFmpeg command
-        logger.info(f"Executing FFmpeg command: {' '.join(cmd)}")
+        # Execute FFmpeg command securely
+        logger.info(f"Executing FFmpeg command with {len(cmd)} arguments")
         
         try:
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+            # Use secure subprocess executor
+            result = await SecureSubprocessExecutor.execute_safe(
+                executable="ffmpeg",
+                args=cmd[1:],  # Skip 'ffmpeg' as it's passed as executable
+                timeout=1800  # 30 minutes timeout for video processing
             )
             
-            stdout, stderr = await process.communicate()
-            
-            if process.returncode != 0:
-                error_msg = stderr.decode() if stderr else "Unknown FFmpeg error"
+            if not result["success"]:
+                error_msg = result["stderr"] or "Unknown FFmpeg error"
                 logger.error(f"FFmpeg failed: {error_msg}")
                 raise RuntimeError(f"FFmpeg assembly failed: {error_msg}")
             
@@ -731,20 +731,19 @@ class VideoAssemblyService:
         ]
         
         try:
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+            # Use secure subprocess executor
+            result = await SecureSubprocessExecutor.execute_safe(
+                executable="ffmpeg",
+                args=cmd[1:],  # Skip 'ffmpeg' as it's passed as executable
+                timeout=60  # 1 minute timeout for thumbnail generation
             )
             
-            await process.communicate()
-            
-            if process.returncode == 0:
+            if result["success"]:
                 # Upload thumbnail
                 thumbnail_url = f"https://storage.viral-os.com/videos/{project.id}/thumbnail.jpg"
                 return thumbnail_url
             else:
-                logger.error("Thumbnail generation failed")
+                logger.error(f"Thumbnail generation failed: {result['stderr']}")
                 return ""
                 
         except Exception as e:
@@ -769,20 +768,19 @@ class VideoAssemblyService:
         ]
         
         try:
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+            # Use secure subprocess executor
+            result = await SecureSubprocessExecutor.execute_safe(
+                executable="ffmpeg",
+                args=cmd[1:],  # Skip 'ffmpeg' as it's passed as executable
+                timeout=120  # 2 minute timeout for preview generation
             )
             
-            await process.communicate()
-            
-            if process.returncode == 0:
+            if result["success"]:
                 # Upload preview
                 preview_url = f"https://storage.viral-os.com/videos/{project.id}/preview.mp4"
                 return preview_url
             else:
-                logger.error("Preview generation failed")
+                logger.error(f"Preview generation failed: {result['stderr']}")
                 return ""
                 
         except Exception as e:

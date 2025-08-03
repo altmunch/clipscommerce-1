@@ -121,7 +121,8 @@ class DataNormalizer:
                 parsed = Price.fromstring(price)
                 if parsed.amount and parsed.amount > 0:
                     return float(parsed.amount)
-            except:
+            except (ValueError, AttributeError, TypeError) as e:
+                logger.debug(f"Price parser failed for '{price}': {e}")
                 pass
             
             # Fallback manual parsing
