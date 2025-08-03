@@ -108,7 +108,7 @@
 <body>
     <div class="container">
         <h1>ClipsCommerce Core Pipeline</h1>
-        <div class="subtitle">Brand URL > Brand Info > Viral Content > Video Outlines > Auto Videos > SEO Optimization</div>
+        <div class="subtitle">Brand URL > Brand Info > Viral Content > Video Outlines > Production Guides > SEO Optimization</div>
         
         <div class="pipeline-flow">
             <div class="flow-step">Brand Analysis</div>
@@ -117,7 +117,7 @@
             <div class="flow-arrow">></div>
             <div class="flow-step">Video Outlines</div>
             <div class="flow-arrow">></div>
-            <div class="flow-step">Video Generation</div>
+            <div class="flow-step">Production Guides</div>
             <div class="flow-arrow">></div>
             <div class="flow-step">SEO Optimization</div>
         </div>
@@ -155,11 +155,11 @@
             <button onclick="createVideoOutlines()">Create Video Outlines</button>
             <div id="outlineResponse" class="response" style="display: none;"></div>
             
-            <!-- Step 4: Generate Videos -->
-            <h3>Step 4: Generate Videos</h3>
+            <!-- Step 4: Generate Production Guides -->
+            <h3>Step 4: Create Production Guides</h3>
             <textarea id="videoOutlines" placeholder="Video outlines from Step 3 (JSON)" rows="3"></textarea>
-            <button onclick="generateVideos()">Generate Videos (Background)</button>
-            <div id="videoResponse" class="response" style="display: none;"></div>
+            <button onclick="generateProductionGuides()">Create Production Guides</button>
+            <div id="productionResponse" class="response" style="display: none;"></div>
             
             <!-- Step 5: SEO Optimization -->
             <h3>Step 5: SEO Optimization</h3>
@@ -352,7 +352,7 @@
             }
         }
 
-        async function generateVideos() {
+        async function generateProductionGuides() {
             const videoOutlinesText = document.getElementById('videoOutlines').value;
             const brandDataText = document.getElementById('brandData').value;
 
@@ -365,20 +365,20 @@
                 const videoOutlines = JSON.parse(videoOutlinesText);
                 const brandData = JSON.parse(brandDataText);
 
-                showStatus('Starting video generation (background process)...', 'info');
+                showStatus('Creating detailed production guides...', 'info');
                 
                 const requestData = {
                     video_outlines: videoOutlines,
                     brand_data: brandData
                 };
 
-                const response = await apiCall('/pipeline/generate-videos', 'POST', requestData);
-                showResponse('videoResponse', response);
+                const response = await apiCall('/pipeline/generate-production-guide', 'POST', requestData);
+                showResponse('productionResponse', response);
                 
                 if (response.ok) {
-                    showStatus('Video generation started in background!', 'success');
+                    showStatus('Production guides created! Ready to film high-quality videos.', 'success');
                 } else {
-                    showStatus('Video generation failed to start', 'error');
+                    showStatus('Production guide creation failed', 'error');
                 }
             } catch (error) {
                 showStatus('Invalid JSON data provided', 'error');
@@ -438,11 +438,11 @@
 
         // Initialize the interface
         window.onload = function() {
-            showStatus('Core Pipeline Interface loaded. Make sure backend is running on localhost:8000', 'info');
+            showStatus('Core Pipeline Interface loaded with REAL backend services!', 'info');
             
-            // Add some example URLs for testing
-            document.getElementById('pipelineBrandUrl').value = 'https://example-brand.com';
-            document.getElementById('brandUrl').value = 'https://example-brand.com';
+            // Add real example URLs for testing
+            document.getElementById('pipelineBrandUrl').value = 'https://theordinary.com';
+            document.getElementById('brandUrl').value = 'https://theordinary.com';
         };
     </script>
 </body>

@@ -78,9 +78,9 @@ class SEOOptimizer:
                     lines = response.content.strip().split('\n')
                     return [line.strip('- ').strip('"').strip("'") for line in lines if line.strip()][:5]
         except Exception as e:
-            logger.debug(f"SEO title generation failed: {e}")
+            raise Exception(f"SEO title generation failed: {e}")
         
-        return [hook] if hook else ["Viral Content"]
+        raise Exception("SEO title generation failed - no valid response from AI")
     
     async def _generate_seo_description(self, video_outline: Dict[str, Any], brand_data: Dict[str, Any]) -> str:
         """Generate SEO-optimized description"""
@@ -113,9 +113,9 @@ class SEOOptimizer:
             if response.success:
                 return response.content.strip()
         except Exception as e:
-            logger.debug(f"SEO description generation failed: {e}")
+            raise Exception(f"SEO description generation failed: {e}")
         
-        return f"Amazing content from {brand_name}! Check out this viral video and see why everyone is talking about it."
+        raise Exception("SEO description generation failed - no valid response from AI")
     
     async def _generate_seo_hashtags(self, content_idea: Dict[str, Any], brand_data: Dict[str, Any]) -> List[str]:
         """Generate SEO-optimized hashtags"""
@@ -167,10 +167,9 @@ class SEOOptimizer:
                             hashtags.extend(line_hashtags)
                     return hashtags[:20]
         except Exception as e:
-            logger.debug(f"Hashtag generation failed: {e}")
+            raise Exception(f"Hashtag generation failed: {e}")
         
-        # Fallback hashtags
-        return ["#viral", "#trending", f"#{brand_name.lower()}", "#fyp", "#explore"]
+        raise Exception("Hashtag generation failed - no valid response from AI")
     
     async def _extract_target_keywords(self, content_idea: Dict[str, Any], brand_data: Dict[str, Any]) -> List[str]:
         """Extract target keywords for SEO"""

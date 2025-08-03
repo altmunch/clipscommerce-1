@@ -121,37 +121,40 @@ async def create_video_outlines(
         raise HTTPException(status_code=500, detail=f"Error creating video outlines: {str(e)}")
 
 
-@router.post("/generate-videos")
-async def generate_videos(
+@router.post("/generate-production-guide")
+async def generate_production_guide(
     *,
     db: Session = Depends(deps.get_db),
     video_outlines: List[Dict[str, Any]],
-    brand_data: Dict[str, Any],
-    background_tasks: BackgroundTasks
+    brand_data: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
-    Step 4: Auto-generate videos and shorts
+    Step 4: Generate detailed production guide for user to create videos
     """
     
     try:
-        video_generator = VideoGenerator()
+        from app.services.ai.production_guide import ProductionGuideGenerator
         
-        # Start video generation in background
-        background_tasks.add_task(
-            generate_videos_background,
-            video_outlines,
-            brand_data
-        )
+        guide_generator = ProductionGuideGenerator()
+        
+        production_guides = []
+        for outline in video_outlines:
+            guide = await guide_generator.create_production_guide(
+                video_outline=outline,
+                brand_data=brand_data
+            )
+            if guide:
+                production_guides.append(guide)
         
         return {
             "success": True,
-            "message": "Video generation started",
-            "total_videos": len(video_outlines),
-            "status": "processing"
+            "production_guides": production_guides,
+            "total_guides": len(production_guides),
+            "message": "Production guides created - ready for user video creation!"
         }
     
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error starting video generation: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error creating production guides: {str(e)}")
 
 
 @router.post("/optimize-seo")
@@ -248,12 +251,18 @@ async def run_full_pipeline(
                     "seo_optimization": seo_data
                 })
         
-        # Step 5: Start video generation in background
-        background_tasks.add_task(
-            generate_videos_background,
-            video_outlines,
-            brand_data
-        )
+        # Step 5: Generate production guides for user video creation
+        from app.services.ai.production_guide import ProductionGuideGenerator
+        guide_generator = ProductionGuideGenerator()
+        
+        production_guides = []
+        for outline in video_outlines:
+            guide = await guide_generator.create_production_guide(
+                video_outline=outline,
+                brand_data=brand_data
+            )
+            if guide:
+                production_guides.append(guide)
         
         return {
             "success": True,
@@ -264,10 +273,10 @@ async def run_full_pipeline(
                 },
                 "content_ideas": content_ideas,
                 "video_outlines": video_outlines,
+                "production_guides": production_guides,
                 "seo_optimized_content": optimized_content
             },
-            "video_generation_status": "started",
-            "message": "Full pipeline completed successfully"
+            "message": "Full pipeline completed successfully - ready for video production!"
         }
     
     except Exception as e:

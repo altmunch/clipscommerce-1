@@ -60,8 +60,8 @@ class CorePipelineHandler(BaseHTTPRequestHandler):
             response = self.handle_generate_content_ideas(data)
         elif self.path == '/api/v1/pipeline/create-video-outlines':
             response = self.handle_create_video_outlines(data)
-        elif self.path == '/api/v1/pipeline/generate-videos':
-            response = self.handle_generate_videos(data)
+        elif self.path == '/api/v1/pipeline/generate-production-guide':
+            response = self.handle_generate_production_guide(data)
         elif self.path == '/api/v1/pipeline/optimize-seo':
             response = self.handle_optimize_seo(data)
         elif self.path == '/api/v1/pipeline/full-pipeline':
@@ -88,47 +88,20 @@ class CorePipelineHandler(BaseHTTPRequestHandler):
         self.wfile.write(json.dumps(data, indent=2).encode())
     
     def handle_analyze_brand(self, data):
-        """Mock brand analysis"""
+        """Dynamic brand analysis based on input"""
         brand_url = data.get('brand_url', '')
         
-        # Mock brand data
-        brand_data = {
-            "name": "Example Brand",
-            "description": "A modern e-commerce brand focused on innovative products",
-            "logo_url": "https://example.com/logo.png",
-            "target_audience": {
-                "demographics": [{"segment": "young_adults", "score": 3}],
-                "interests": [{"segment": "tech", "score": 2}]
-            },
-            "value_proposition": "Innovative products that make life easier",
-            "brand_voice": {"primary_voice": "casual", "scores": {"casual": 3, "friendly": 2}},
-            "social_links": {"instagram": "https://instagram.com/examplebrand"},
-            "contact_info": {"email": "hello@example.com"}
-        }
+        # Extract brand name from URL
+        brand_name = self.extract_brand_name_from_url(brand_url)
         
-        # Mock products data
-        products = [
-            {
-                "name": "Smart Water Bottle",
-                "price": "$49.99",
-                "description": "Temperature-controlled smart water bottle with app connectivity",
-                "images": ["https://example.com/product1.jpg"],
-                "features": ["Temperature control", "App connectivity", "Leak-proof design"],
-                "benefits": ["stays hydrated", "tracks water intake"],
-                "use_cases": ["perfect for workouts", "ideal for office use"],
-                "url": f"{brand_url}/products/smart-water-bottle"
-            },
-            {
-                "name": "Wireless Charging Pad",
-                "price": "$29.99", 
-                "description": "Fast wireless charging pad compatible with all devices",
-                "images": ["https://example.com/product2.jpg"],
-                "features": ["Fast charging", "Universal compatibility", "LED indicators"],
-                "benefits": ["reduces cable clutter", "convenient charging"],
-                "use_cases": ["great for desk setup", "perfect for nightstand"],
-                "url": f"{brand_url}/products/wireless-charging-pad"
-            }
-        ]
+        # Detect industry from URL and brand name
+        industry = self.detect_industry_from_url(brand_url, brand_name)
+        
+        # Generate industry-specific brand data
+        brand_data = self.generate_industry_specific_brand_data(brand_name, industry, brand_url)
+        
+        # Generate industry-specific products
+        products = self.generate_industry_specific_products(industry, brand_name, brand_url)
         
         return {
             "success": True,
@@ -243,16 +216,211 @@ class CorePipelineHandler(BaseHTTPRequestHandler):
             "message": "Video outlines created successfully"
         }
     
-    def handle_generate_videos(self, data):
-        """Mock video generation"""
+    def handle_generate_production_guide(self, data):
+        """Mock production guide generation"""
         video_outlines = data.get('video_outlines', [])
+        brand_data = data.get('brand_data', {})
+        
+        production_guides = []
+        
+        for i, outline in enumerate(video_outlines[:3]):  # Limit to 3 guides
+            guide = {
+                "video_title": f"Production Guide #{i+1}: {outline.get('hook', {}).get('text', 'Viral Video')}",
+                "overview": {
+                    "concept": outline.get('hook', {}).get('text', 'Engaging brand content'),
+                    "target_duration": 30,
+                    "platform": "tiktok",
+                    "style": "high-energy, authentic"
+                },
+                "pre_production": {
+                    "equipment_needed": {
+                        "essential": [
+                            "Smartphone with good camera (iPhone 12+ or equivalent)",
+                            "Tripod or phone mount for stability",
+                            "Ring light or good natural lighting setup",
+                            "Clean, uncluttered background"
+                        ],
+                        "recommended": [
+                            "External microphone for crystal clear audio",
+                            "Reflector for even lighting",
+                            "Extra phone battery/portable charger",
+                            "Props: your actual products to showcase"
+                        ]
+                    },
+                    "location_setup": [
+                        "Find a quiet space with minimal background noise",
+                        "Position near large window for natural light (avoid direct sunlight)",
+                        "Ensure background is clean and branded if possible",
+                        "Test different angles and lighting before filming"
+                    ],
+                    "preparation_checklist": [
+                        "Practice your script multiple times until natural",
+                        "Test all equipment and backup options",
+                        "Prepare and organize all product props",
+                        "Plan your outfit (solid colors work best)",
+                        "Have water nearby and take breaks between takes"
+                    ]
+                },
+                "production": {
+                    "detailed_shot_list": [
+                        {
+                            "shot_number": 1,
+                            "timing": "0-3s",
+                            "type": "HOOK",
+                            "frame": "Close-up of you + product",
+                            "action": "Deliver hook line with high energy",
+                            "camera_notes": "Start tight, quick zoom out for impact",
+                            "lighting": "Bright, clear lighting on face and product",
+                            "audio": "Clear, enthusiastic delivery of hook"
+                        },
+                        {
+                            "shot_number": 2,
+                            "timing": "3-8s", 
+                            "type": "PROBLEM",
+                            "frame": "Medium shot showing context",
+                            "action": "Demonstrate or explain the problem/pain point",
+                            "camera_notes": "Stable shot, slight pan if needed",
+                            "lighting": "Even lighting, slightly softer",
+                            "audio": "Relatable, empathetic tone"
+                        },
+                        {
+                            "shot_number": 3,
+                            "timing": "8-25s",
+                            "type": "SOLUTION", 
+                            "frame": "Product demonstration focus",
+                            "action": "Show product in action, highlight key features",
+                            "camera_notes": "Multiple angles, smooth movements",
+                            "lighting": "Bright lighting on product details",
+                            "audio": "Confident explanation of benefits"
+                        },
+                        {
+                            "shot_number": 4,
+                            "timing": "25-30s",
+                            "type": "CALL TO ACTION",
+                            "frame": "You + branding elements",
+                            "action": "Clear direction for next steps",
+                            "camera_notes": "Stable, centered shot",
+                            "lighting": "Professional, even lighting",
+                            "audio": "Direct, friendly call-to-action"
+                        }
+                    ],
+                    "dialogue_script": [
+                        {
+                            "scene": "Hook (0-3s)",
+                            "script": outline.get('scenes', [{}])[0].get('dialogue', 'Amazing product reveal!'),
+                            "delivery": "HIGH ENERGY - This determines if people keep watching!"
+                        },
+                        {
+                            "scene": "Problem (3-8s)", 
+                            "script": "You know that frustrating moment when...",
+                            "delivery": "Relatable tone - connect with viewer's pain point"
+                        },
+                        {
+                            "scene": "Solution (8-25s)",
+                            "script": "Well, here's exactly how this changes everything...",
+                            "delivery": "Confident, helpful - show genuine excitement"
+                        },
+                        {
+                            "scene": "CTA (25-30s)",
+                            "script": f"Get yours from {brand_data.get('name', 'our store')} - link in bio!",
+                            "delivery": "Clear, direct, and friendly"
+                        }
+                    ]
+                },
+                "post_production": {
+                    "editing_sequence": [
+                        {
+                            "step": 1,
+                            "task": "Import footage and organize clips",
+                            "details": "Create folders for each scene type, review all takes"
+                        },
+                        {
+                            "step": 2,
+                            "task": "Create rough cut following timing",
+                            "details": "First 3 seconds are CRITICAL - cut anything that doesn't grab attention"
+                        },
+                        {
+                            "step": 3,
+                            "task": "Add text overlays",
+                            "details": "Bold, readable fonts - test on mobile device preview"
+                        },
+                        {
+                            "step": 4,
+                            "task": "Insert quick transitions",
+                            "details": "Keep pace fast - use cuts, quick zooms, or trending transitions"
+                        },
+                        {
+                            "step": 5,
+                            "task": "Add trending audio/music",
+                            "details": "Background music at 20-30% volume, trending sounds boost reach"
+                        },
+                        {
+                            "step": 6,
+                            "task": "Final color correction and export",
+                            "details": "Bright, vibrant colors - export in 1080x1920 (9:16) for mobile"
+                        }
+                    ],
+                    "text_overlays": [
+                        {
+                            "timing": "0-3s",
+                            "text": outline.get('scenes', [{}])[0].get('text_overlay', 'WAIT FOR IT...'),
+                            "style": "Bold white text with black outline",
+                            "position": "Center or top third"
+                        },
+                        {
+                            "timing": "8-15s", 
+                            "text": "GAME CHANGER 🤯",
+                            "style": "Bright, attention-grabbing",
+                            "position": "Bottom third"
+                        },
+                        {
+                            "timing": "25-30s",
+                            "text": "LINK IN BIO",
+                            "style": "Clear, action-oriented",
+                            "position": "Center"
+                        }
+                    ],
+                    "export_settings": {
+                        "resolution": "1080x1920 (vertical 9:16)",
+                        "frame_rate": "30fps (smooth motion)",
+                        "format": "MP4 (best compatibility)",
+                        "quality": "High bitrate for crisp upload"
+                    }
+                },
+                "quality_checklist": {
+                    "before_posting": [
+                        "✅ Hook grabs attention in first 3 seconds",
+                        "✅ Audio is clear and at good volume levels",
+                        "✅ Text overlays are readable on mobile",
+                        "✅ Product is clearly visible and well-lit",
+                        "✅ Call-to-action is specific and actionable",
+                        "✅ Video flows smoothly without jarring cuts",
+                        "✅ Branding is present but not overwhelming"
+                    ],
+                    "technical_requirements": [
+                        "✅ 9:16 vertical aspect ratio",
+                        "✅ 15-30 second duration",
+                        "✅ 1080p resolution minimum", 
+                        "✅ Clear audio throughout",
+                        "✅ Consistent lighting and color"
+                    ]
+                },
+                "pro_tips": [
+                    "Film multiple takes of each scene - you'll want options in editing",
+                    "The first 3 seconds determine 70% of your success - make them count",
+                    "Use trending audio when possible - it significantly boosts reach",
+                    "Test your video on mobile before posting - that's where it'll be watched",
+                    "Engage with comments immediately after posting - algorithm boost",
+                    "Post when your audience is most active (check your analytics)"
+                ]
+            }
+            production_guides.append(guide)
         
         return {
             "success": True,
-            "message": "Video generation started in background",
-            "total_videos": len(video_outlines),
-            "status": "processing",
-            "estimated_completion": time.time() + 300  # 5 minutes from now
+            "production_guides": production_guides,
+            "total_guides": len(production_guides),
+            "message": f"Production guides created! Ready to film {len(production_guides)} high-quality videos."
         }
     
     def handle_optimize_seo(self, data):

@@ -496,11 +496,13 @@ class ViralContentGenerator:
         )
         
         if not response.success:
-            logger.error(f"Hook generation failed: {response.error}")
-            return []
+            raise Exception(f"AI hook generation failed: {response.error}")
         
         # Parse AI response into ViralHook objects
         hooks = self._parse_hooks_response(response.content, platform)
+        
+        if not hooks:
+            raise Exception("AI hook generation returned no valid hooks")
         
         # Score and enhance each hook
         enhanced_hooks = []
@@ -588,8 +590,7 @@ class ViralContentGenerator:
             hook.viral_score = score_data.get("overall_score", 5.0)
             hook.reasoning = score_data.get("reasoning", "")
         else:
-            # Fallback scoring based on pattern analysis
-            hook.viral_score = self._calculate_fallback_score(hook)
+            raise Exception(f"AI scoring service failed: {response.error if hasattr(response, 'error') else 'Unknown error'}")
         
         # Add improvement suggestions
         hook.improvements = self.pattern_analyzer.suggest_improvements(hook.text, hook.pattern)
@@ -791,13 +792,12 @@ class ViralContentGenerator:
                     outline_data["content_idea"] = content_idea
                     outline_data["hook"] = best_hook
                     return outline_data
-                except:
-                    # Fallback outline structure
-                    return self._create_fallback_outline(content_idea, brand_data, best_hook)
+                except json.JSONDecodeError:
+                    raise Exception("AI returned invalid JSON for video outline")
         except Exception as e:
-            logger.debug(f"Video outline generation failed: {e}")
+            raise Exception(f"Video outline generation failed: {e}")
         
-        return self._create_fallback_outline(content_idea, brand_data, best_hook)
+        raise Exception("Video outline generation failed - no valid response from AI")
     
     def _detect_industry(self, brand_data: Dict[str, Any], products: List[Dict[str, Any]]) -> str:
         """Detect industry from brand and product data"""
@@ -824,71 +824,8 @@ class ViralContentGenerator:
             if any(keyword in description for keyword in keywords):
                 return industry
         
-        return "lifestyle"  # Default fallback
+        return "general"  # Generic industry when detection fails
     
-    def _create_fallback_outline(self, content_idea: Dict[str, Any], brand_data: Dict[str, Any], hook: Dict[str, Any]) -> Dict[str, Any]:
-        """Create fallback video outline when AI generation fails"""
-        
-        brand_name = brand_data.get("name", "Brand")
-        
-        return {
-            "content_idea": content_idea,
-            "hook": hook,
-            "total_duration": 30,
-            "scenes": [
-                {
-                    "scene_number": 1,
-                    "timing": "0-3s",
-                    "type": "hook",
-                    "visual": "Close-up product shot with dynamic movement",
-                    "dialogue": hook.get("text", "Amazing content coming up!"),
-                    "text_overlay": "WAIT FOR IT...",
-                    "transition": "Quick cut"
-                },
-                {
-                    "scene_number": 2,
-                    "timing": "3-8s",
-                    "type": "problem",
-                    "visual": "Problem situation or before state",
-                    "dialogue": "You know that feeling when...",
-                    "text_overlay": "THE PROBLEM",
-                    "transition": "Smooth transition"
-                },
-                {
-                    "scene_number": 3,
-                    "timing": "8-15s",
-                    "type": "solution",
-                    "visual": "Product in action solving the problem",
-                    "dialogue": "Well, here's the solution!",
-                    "text_overlay": "GAME CHANGER",
-                    "transition": "Quick reveal"
-                },
-                {
-                    "scene_number": 4,
-                    "timing": "15-25s",
-                    "type": "proof",
-                    "visual": "Results, transformation, or demonstration",
-                    "dialogue": "Look at these amazing results!",
-                    "text_overlay": "RESULTS SPEAK",
-                    "transition": "Montage"
-                },
-                {
-                    "scene_number": 5,
-                    "timing": "25-30s",
-                    "type": "cta",
-                    "visual": "Brand logo and product with clear CTA",
-                    "dialogue": f"Get yours from {brand_name} now!",
-                    "text_overlay": "LINK IN BIO",
-                    "transition": "Fade out"
-                }
-            ],
-            "metadata": {
-                "target_platform": "tiktok",
-                "video_style": "fast-paced",
-                "music_style": "upbeat trending",
-                "hashtags": ["#viral", "#trending", f"#{brand_name.lower()}"]
-            }
-        }
 
 
 # Global service instance
