@@ -9,3 +9,9 @@ from .content import (
 )
 from .results import KPIResponse, ChartResponse, ContentResponse, InsightsResponse
 from .job import JobStatus, JobResponse
+from .video_upload import (
+    VideoUploadCreate, VideoUploadResponse, VideoClipUploadCreate, VideoClipUploadResponse,
+    VideoProjectListItem, VideoProjectListResponse, VideoUploadStatusResponse,
+    VideoMetadataResponse, BulkVideoUploadRequest, BulkVideoUploadResponse,
+    VideoProcessingOptions, VideoUploadWithProcessing, UserVideoLibrary
+)

@@ -1,21 +1,6 @@
 version: '3.8'
 
 services:
-  # Frontend - Next.js
-  frontend:
-    build: 
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-    environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
-    depends_on:
-      - backend
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-
   # Backend - FastAPI
   backend:
     build:

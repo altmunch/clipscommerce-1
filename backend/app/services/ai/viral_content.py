@@ -702,6 +702,193 @@ class ViralContentGenerator:
         
         hook.platform = target_platform
         return hook
+    
+    async def generate_ideas(
+        self,
+        brand_data: Dict[str, Any],
+        products: List[Dict[str, Any]],
+        count: int = 5
+    ) -> List[Dict[str, Any]]:
+        """Generate viral content ideas based on brand and products"""
+        
+        await self._get_services()
+        
+        brand_name = brand_data.get("name", "Brand")
+        description = brand_data.get("description", "")
+        target_audience = brand_data.get("target_audience", {})
+        value_proposition = brand_data.get("value_proposition", "")
+        
+        # Extract content pillars from products
+        content_pillars = []
+        for product in products[:5]:  # Use top 5 products
+            if product.get("name"):
+                content_pillars.append(product["name"])
+        
+        if not content_pillars:
+            content_pillars = ["Product showcase", "Brand story", "Behind the scenes"]
+        
+        # Generate content ideas
+        ideas = await self.generate_content_ideas(
+            brand_name=brand_name,
+            industry=self._detect_industry(brand_data, products),
+            content_pillars=content_pillars,
+            target_audience=str(target_audience),
+            platform=Platform.TIKTOK,  # Default to TikTok
+            count=count
+        )
+        
+        # Convert to dict format for API response
+        return [idea.to_dict() for idea in ideas]
+    
+    async def create_video_outline(
+        self,
+        content_idea: Dict[str, Any],
+        brand_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Create detailed video outline from content idea"""
+        
+        await self._get_services()
+        
+        # Get the best hook from the content idea
+        hooks = content_idea.get("hooks", [])
+        if not hooks:
+            return None
+        
+        best_hook = max(hooks, key=lambda h: h.get("viral_score", 0))
+        
+        # Generate video outline using AI
+        outline_prompt = f"""
+        Create a detailed video outline for this viral content:
+        
+        Hook: {best_hook.get("text", "")}
+        Content Pillar: {content_idea.get("content_pillar", "")}
+        Target Audience: {content_idea.get("target_audience", "")}
+        Brand: {brand_data.get("name", "")}
+        Brand Voice: {brand_data.get("brand_voice", {}).get("primary_voice", "casual")}
+        
+        Create a video outline with:
+        1. Opening hook (first 3 seconds)
+        2. Problem/pain point (3-8 seconds)
+        3. Solution reveal (8-15 seconds)
+        4. Proof/demonstration (15-25 seconds)
+        5. Call to action (25-30 seconds)
+        
+        For each scene include:
+        - Visual description
+        - Dialogue/voiceover
+        - Text overlay suggestions
+        - Timing
+        - Transition notes
+        
+        Format as JSON with scenes array and metadata.
+        """
+        
+        try:
+            response = await self.text_service.generate(outline_prompt, max_tokens=800, temperature=0.7)
+            if response.success:
+                try:
+                    outline_data = json.loads(response.content)
+                    outline_data["content_idea"] = content_idea
+                    outline_data["hook"] = best_hook
+                    return outline_data
+                except:
+                    # Fallback outline structure
+                    return self._create_fallback_outline(content_idea, brand_data, best_hook)
+        except Exception as e:
+            logger.debug(f"Video outline generation failed: {e}")
+        
+        return self._create_fallback_outline(content_idea, brand_data, best_hook)
+    
+    def _detect_industry(self, brand_data: Dict[str, Any], products: List[Dict[str, Any]]) -> str:
+        """Detect industry from brand and product data"""
+        
+        description = (brand_data.get("description", "") + " " + 
+                      brand_data.get("value_proposition", "")).lower()
+        
+        # Add product names to analysis
+        for product in products[:3]:
+            description += " " + product.get("name", "").lower()
+        
+        industry_indicators = {
+            "fashion": ["fashion", "clothing", "apparel", "style", "outfit"],
+            "beauty": ["beauty", "skincare", "cosmetics", "makeup", "care"],
+            "tech": ["technology", "tech", "software", "app", "digital"],
+            "fitness": ["fitness", "health", "workout", "exercise", "wellness"],
+            "food": ["food", "restaurant", "recipe", "cooking", "nutrition"],
+            "home": ["home", "furniture", "decor", "kitchen", "interior"],
+            "business": ["business", "professional", "service", "consulting"],
+            "education": ["education", "learning", "course", "training"]
+        }
+        
+        for industry, keywords in industry_indicators.items():
+            if any(keyword in description for keyword in keywords):
+                return industry
+        
+        return "lifestyle"  # Default fallback
+    
+    def _create_fallback_outline(self, content_idea: Dict[str, Any], brand_data: Dict[str, Any], hook: Dict[str, Any]) -> Dict[str, Any]:
+        """Create fallback video outline when AI generation fails"""
+        
+        brand_name = brand_data.get("name", "Brand")
+        
+        return {
+            "content_idea": content_idea,
+            "hook": hook,
+            "total_duration": 30,
+            "scenes": [
+                {
+                    "scene_number": 1,
+                    "timing": "0-3s",
+                    "type": "hook",
+                    "visual": "Close-up product shot with dynamic movement",
+                    "dialogue": hook.get("text", "Amazing content coming up!"),
+                    "text_overlay": "WAIT FOR IT...",
+                    "transition": "Quick cut"
+                },
+                {
+                    "scene_number": 2,
+                    "timing": "3-8s",
+                    "type": "problem",
+                    "visual": "Problem situation or before state",
+                    "dialogue": "You know that feeling when...",
+                    "text_overlay": "THE PROBLEM",
+                    "transition": "Smooth transition"
+                },
+                {
+                    "scene_number": 3,
+                    "timing": "8-15s",
+                    "type": "solution",
+                    "visual": "Product in action solving the problem",
+                    "dialogue": "Well, here's the solution!",
+                    "text_overlay": "GAME CHANGER",
+                    "transition": "Quick reveal"
+                },
+                {
+                    "scene_number": 4,
+                    "timing": "15-25s",
+                    "type": "proof",
+                    "visual": "Results, transformation, or demonstration",
+                    "dialogue": "Look at these amazing results!",
+                    "text_overlay": "RESULTS SPEAK",
+                    "transition": "Montage"
+                },
+                {
+                    "scene_number": 5,
+                    "timing": "25-30s",
+                    "type": "cta",
+                    "visual": "Brand logo and product with clear CTA",
+                    "dialogue": f"Get yours from {brand_name} now!",
+                    "text_overlay": "LINK IN BIO",
+                    "transition": "Fade out"
+                }
+            ],
+            "metadata": {
+                "target_platform": "tiktok",
+                "video_style": "fast-paced",
+                "music_style": "upbeat trending",
+                "hashtags": ["#viral", "#trending", f"#{brand_name.lower()}"]
+            }
+        }
 
 
 # Global service instance

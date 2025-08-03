@@ -4,9 +4,13 @@ API endpoints for video generation workflows
 
 import logging
 from typing import Dict, Any, List, Optional
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Query
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Query, UploadFile, File, Form
 from pydantic import BaseModel, Field
 from enum import Enum
+import uuid
+import aiofiles
+import os
+from pathlib import Path
 
 from app.models.product import Product
 from app.models.brand import Brand
@@ -24,6 +28,40 @@ router = APIRouter()
 
 
 # Request/Response Models
+
+class VideoUploadRequestModel(BaseModel):
+    """API model for video upload request"""
+    product_id: str = Field(..., description="Product ID to associate video with")
+    brand_id: Optional[str] = Field(None, description="Brand ID (optional)")
+    title: str = Field(..., description="Video title")
+    description: Optional[str] = Field(None, description="Video description")
+    target_platform: str = Field("tiktok", description="Target platform (tiktok, instagram, youtube_shorts)")
+    tags: List[str] = Field(default_factory=list, description="Video tags")
+    is_ugc: bool = Field(False, description="Whether this is user-generated content")
+
+
+class VideoClipUploadRequestModel(BaseModel):
+    """API model for individual video clip upload"""
+    project_id: str = Field(..., description="Video project ID")
+    clip_title: str = Field(..., description="Clip title")
+    segment_number: int = Field(..., description="Order within project")
+    start_time: float = Field(0.0, description="Start time in seconds")
+    end_time: Optional[float] = Field(None, description="End time in seconds (auto-calculated if not provided)")
+    description: Optional[str] = Field(None, description="Clip description")
+
+
+class VideoUploadResponseModel(BaseModel):
+    """API model for video upload response"""
+    video_id: str
+    project_id: str
+    title: str
+    status: str
+    video_url: str
+    thumbnail_url: Optional[str]
+    duration: float
+    file_size: int
+    processing_status: str
+
 
 class VideoGenerationRequestModel(BaseModel):
     """API model for video generation request"""
@@ -586,3 +624,320 @@ async def search_stock_assets(
 
 # Add time import for batch endpoint
 import time
+
+
+# Video Upload Configuration
+UPLOAD_DIR = Path("uploads/videos")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+ALLOWED_VIDEO_TYPES = {
+    "video/mp4": ".mp4",
+    "video/mov": ".mov", 
+    "video/avi": ".avi",
+    "video/webm": ".webm",
+    "video/mkv": ".mkv"
+}
+
+MAX_FILE_SIZE = 500 * 1024 * 1024  # 500MB
+
+
+async def validate_video_file(file: UploadFile) -> dict:
+    """Validate uploaded video file"""
+    if file.content_type not in ALLOWED_VIDEO_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type. Allowed types: {list(ALLOWED_VIDEO_TYPES.keys())}"
+        )
+    
+    # Read file to check size
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File too large. Maximum size: {MAX_FILE_SIZE // (1024*1024)}MB"
+        )
+    
+    # Reset file pointer
+    await file.seek(0)
+    
+    return {
+        "size": len(content),
+        "extension": ALLOWED_VIDEO_TYPES[file.content_type]
+    }
+
+
+async def save_uploaded_video(file: UploadFile, project_id: str, segment_number: int = 0) -> dict:
+    """Save uploaded video file to disk"""
+    file_info = await validate_video_file(file)
+    
+    # Generate unique filename
+    file_id = str(uuid.uuid4())
+    filename = f"{project_id}_{segment_number}_{file_id}{file_info['extension']}"
+    file_path = UPLOAD_DIR / filename
+    
+    # Save file
+    async with aiofiles.open(file_path, 'wb') as f:
+        content = await file.read()
+        await f.write(content)
+    
+    return {
+        "file_path": str(file_path),
+        "filename": filename,
+        "size": file_info["size"],
+        "url": f"/uploads/videos/{filename}"
+    }
+
+
+# Video Upload Endpoints
+
+@router.post("/upload/project", response_model=VideoUploadResponseModel)
+async def upload_video_project(
+    file: UploadFile = File(...),
+    product_id: str = Form(...),
+    brand_id: Optional[str] = Form(None),
+    title: str = Form(...),
+    description: Optional[str] = Form(None),
+    target_platform: str = Form("tiktok"),
+    tags: str = Form("[]"),  # JSON string of tags
+    is_ugc: bool = Form(False)
+):
+    """
+    Upload a complete video as a project
+    """
+    try:
+        from app.models.video_project import VideoProject, VideoProjectTypeEnum, GenerationStatusEnum
+        from app.db.session import SessionLocal
+        import json
+        
+        # Parse tags if provided
+        try:
+            parsed_tags = json.loads(tags) if tags else []
+        except json.JSONDecodeError:
+            parsed_tags = []
+        
+        # Create project
+        project_id = str(uuid.uuid4())
+        
+        # Save uploaded file
+        file_info = await save_uploaded_video(file, project_id)
+        
+        # Get video duration (mock for now - in production use ffprobe)
+        duration = 30.0  # Placeholder
+        
+        # Create database record
+        db = SessionLocal()
+        try:
+            video_project = VideoProject(
+                id=project_id,
+                title=title,
+                description=description,
+                project_type=VideoProjectTypeEnum.UGC_TESTIMONIAL if is_ugc else VideoProjectTypeEnum.PRODUCT_AD,
+                product_id=product_id,
+                brand_id=brand_id,
+                target_platform=target_platform,
+                target_duration=duration,
+                status=GenerationStatusEnum.COMPLETED,  # User uploaded, so it's complete
+                final_video_url=file_info["url"],
+                generation_config={"uploaded": True, "tags": parsed_tags}
+            )
+            
+            db.add(video_project)
+            db.commit()
+            db.refresh(video_project)
+            
+        finally:
+            db.close()
+        
+        return VideoUploadResponseModel(
+            video_id=project_id,
+            project_id=project_id,
+            title=title,
+            status="completed",
+            video_url=file_info["url"],
+            thumbnail_url=None,  # TODO: Generate thumbnail
+            duration=duration,
+            file_size=file_info["size"],
+            processing_status="completed"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Video upload failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Video upload failed: {str(e)}")
+
+
+@router.post("/upload/clip")
+async def upload_video_clip(
+    file: UploadFile = File(...),
+    project_id: str = Form(...),
+    clip_title: str = Form(...),
+    segment_number: int = Form(...),
+    start_time: float = Form(0.0),
+    end_time: Optional[float] = Form(None),
+    description: Optional[str] = Form(None)
+):
+    """
+    Upload a video clip to an existing project
+    """
+    try:
+        from app.models.video_project import VideoSegment, GenerationStatusEnum
+        from app.db.session import SessionLocal
+        
+        # Save uploaded file
+        file_info = await save_uploaded_video(file, project_id, segment_number)
+        
+        # Calculate duration if end_time not provided
+        if end_time is None:
+            # Mock duration calculation - in production use ffprobe
+            end_time = start_time + 10.0  # Placeholder
+        
+        duration = end_time - start_time
+        
+        # Create database record
+        db = SessionLocal()
+        try:
+            video_segment = VideoSegment(
+                project_id=project_id,
+                segment_number=segment_number,
+                title=clip_title,
+                start_time=start_time,
+                end_time=end_time,
+                duration=duration,
+                prompt=description or f"User uploaded clip: {clip_title}",
+                status=GenerationStatusEnum.COMPLETED,
+                video_url=file_info["url"]
+            )
+            
+            db.add(video_segment)
+            db.commit()
+            db.refresh(video_segment)
+            
+        finally:
+            db.close()
+        
+        return {
+            "segment_id": str(video_segment.id),
+            "project_id": project_id,
+            "title": clip_title,
+            "status": "completed",
+            "video_url": file_info["url"],
+            "duration": duration,
+            "file_size": file_info["size"],
+            "segment_number": segment_number
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Video clip upload failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Video clip upload failed: {str(e)}")
+
+
+@router.get("/upload/projects")
+async def list_uploaded_projects(
+    product_id: Optional[str] = Query(None),
+    brand_id: Optional[str] = Query(None),
+    is_ugc: Optional[bool] = Query(None),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0)
+):
+    """
+    List uploaded video projects with filtering options
+    """
+    try:
+        from app.models.video_project import VideoProject, VideoProjectTypeEnum
+        from app.db.session import SessionLocal
+        
+        db = SessionLocal()
+        try:
+            query = db.query(VideoProject)
+            
+            # Apply filters
+            if product_id:
+                query = query.filter(VideoProject.product_id == product_id)
+            if brand_id:
+                query = query.filter(VideoProject.brand_id == brand_id)
+            if is_ugc is not None:
+                if is_ugc:
+                    query = query.filter(VideoProject.project_type == VideoProjectTypeEnum.UGC_TESTIMONIAL)
+                else:
+                    query = query.filter(VideoProject.project_type != VideoProjectTypeEnum.UGC_TESTIMONIAL)
+            
+            # Filter for uploaded videos only
+            query = query.filter(VideoProject.generation_config.contains({"uploaded": True}))
+            
+            total = query.count()
+            projects = query.offset(offset).limit(limit).all()
+            
+            project_list = []
+            for project in projects:
+                project_list.append({
+                    "id": str(project.id),
+                    "title": project.title,
+                    "description": project.description,
+                    "project_type": project.project_type.value,
+                    "target_platform": project.target_platform,
+                    "duration": project.target_duration,
+                    "status": project.status.value,
+                    "video_url": project.final_video_url,
+                    "thumbnail_url": project.thumbnail_url,
+                    "created_at": project.created_at.isoformat(),
+                    "tags": project.generation_config.get("tags", []) if project.generation_config else []
+                })
+            
+            return {
+                "projects": project_list,
+                "total": total,
+                "limit": limit,
+                "offset": offset
+            }
+            
+        finally:
+            db.close()
+        
+    except Exception as e:
+        logger.error(f"Failed to list uploaded projects: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to list uploaded projects: {str(e)}")
+
+
+@router.delete("/upload/project/{project_id}")
+async def delete_uploaded_project(project_id: str):
+    """
+    Delete an uploaded video project and its files
+    """
+    try:
+        from app.models.video_project import VideoProject
+        from app.db.session import SessionLocal
+        
+        db = SessionLocal()
+        try:
+            project = db.query(VideoProject).filter(VideoProject.id == project_id).first()
+            
+            if not project:
+                raise HTTPException(status_code=404, detail="Project not found")
+            
+            # Check if it's an uploaded project
+            if not (project.generation_config and project.generation_config.get("uploaded")):
+                raise HTTPException(status_code=400, detail="Can only delete uploaded projects")
+            
+            # Delete associated files
+            if project.final_video_url:
+                file_path = UPLOAD_DIR / Path(project.final_video_url).name
+                if file_path.exists():
+                    file_path.unlink()
+            
+            # Delete database record
+            db.delete(project)
+            db.commit()
+            
+            return {"message": "Project deleted successfully", "project_id": project_id}
+            
+        finally:
+            db.close()
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete project: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete project: {str(e)}")
